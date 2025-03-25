@@ -1,2 +1,7 @@
 network_protein_analysis.py
-/home/epi2melabs/projects/AcrNetworks/PISCES/PDBs_compressed
+PISCES/
+**/__pycache__/
+.vscode/
+PISCES_data_filtered.csv
+PISCES_data_info.csv
+PISCES_data_info_mutant.csv
