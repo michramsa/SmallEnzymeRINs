@@ -1,6 +1,4 @@
 from imports import *
-from constants import *
-from protein_contact import *
 
 source_dir = "/home/epi2melabs/projects/AcrMich/known acrs"
 save_dir = "/home/epi2melabs/projects/AcrMich/known acrs/saved graphs/"
