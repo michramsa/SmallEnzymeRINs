@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from imports import *
-from Amitai.retrieve_PISCES_data import *
+from retrieve_PISCES_data import *
 
 # This file is primarily for taking the PISCES data and running it through arpeggio
 # Steps will include the following:
