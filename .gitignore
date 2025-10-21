@@ -1,8 +1,5 @@
-network_protein_analysis.py
-PISCES/
 **/__pycache__/
 .vscode/
-PISCES_data_filtered.csv
-PISCES_data_info.csv
-PISCES_data_info_mutant.csv
-known acrs/
+Important Files/
+PISCES/
+TENTATIVE KEEPERS/
