@@ -1,42 +1,49 @@
-This Github contains the analysis code used for the paper -INSERT FINAL TITLE HERE-. This is a “cleaned” version of the code (includes intermediary drafted files that were used to build more refined files) - that said, any possible missing parts, I can be contacted directly to help with. 
+This Github contains the analysis code used for the paper -INSERT FINAL TITLE HERE-. This is a “cleaned” version of the code (includes all intermediary drafted files that were used to build more refined files) - that said, any possible missing parts or issues, I can be contacted directly to help with here (via Issues).
 
-Computing Environment Used:
+Data used within the paper can be found in Zenodo here: -INSERT LINK HERE-
+
+## Computing Environment Used:
 
 All work was performed on an Alienware x15 R2 laptop utilizing the VSCode IDE in a Windows Subsystem for Linux (WSL) Ubuntu environment.
-Processor: 12th Gen Intel(R) Core(TM) i7-12700H (2.30 GHz)
-Cores: 14
-Logical processors: 20
-Installed RAM: 32.0 GB
-System type: 64-bit operating system, x64-based processor
-GPU: NVIDIA GeForce RTX 3060 Laptop GPU
 
-Python version - Python 3.10.12
+- Processor: 12th Gen Intel(R) Core(TM) i7-12700H (2.30 GHz)
+- Cores: 14
+- Logical processors: 20
+- Installed RAM: 32.0 GB
+- System type: 64-bit operating system, x64-based processor
+- GPU: NVIDIA GeForce RTX 3060 Laptop GPU
+- Python version - Python 3.10.12
 
-Dependencies:
+## Dependencies:
 
 An Anaconda environment was created and used with the code. All active dependencies and their version numbers can be found in “requirements.txt”. 
 
-Arpeggio was installed separately and ran within its own environment. To learn how to install Arpeggio (maintained by PDBeurope), please refer to its Github found here: https://github.com/PDBeurope/arpeggio . 
+Arpeggio was installed separately and ran within its own environment. Dependencies needed to run Arpeggio are NOT included within the above "requirements.txt" file. To learn how to install Arpeggio (maintained by PDBeurope), please refer to its Github found here: https://github.com/PDBeurope/arpeggio . 
 
-The general high-level workflow is the following:
+## The general high-level workflow is the following:
 
-Source PDB data
-For protein contact network (PCN) creation:
-Calculate residue distances provided a given threshold in angstroms
-Provided within the threshold, utilize Biopython and NetworkX to create PCN based on gathered information
-For residue interaction graph (RIG) creation:
-Utilize Arpeggio’s cleaning function to create cleaned mmCIF files of the PDBs of interest
-Run Arpeggio on the cleaned mmCIF files, obtain JSON files
-Read through the JSON files
-Provided an interaction exists between two residues, use NetworkX to build the RIG
-Various analyses based on the gathered PCNs and RIGs
-Small-world index 
-Standardized degree and closeness centrality values based on created PCNs and RIGs 
-Creation of CSVs to hold PCN/RIG data such as keeping track of individual residue degree or closeness centrality values
+1. Source PDB data
 
-~~
+2. For protein contact network (PCN) creation:
+- Calculate residue distances provided a given threshold in angstroms
+- Provided within the threshold, utilize Biopython and NetworkX to create PCN based on gathered information
 
-File Directory (CTRL+F a filename for a description): 
+3. For residue interaction graph (RIG) creation:
+
+- Utilize Arpeggio’s cleaning function to create cleaned mmCIF files of the PDBs of interest
+- Run Arpeggio on the cleaned mmCIF files, obtain JSON files
+- Read through the JSON files
+- Provided an interaction exists between two residues, use NetworkX to build the RIG
+
+4. Perform various analyses based on the gathered PCNs and RIGs
+
+- Small-world index 
+- Standardized degree and closeness centrality values based on created PCNs and RIGs 
+- Creation of CSVs to hold PCN/RIG data such as keeping track of individual residue degree or closeness centrality values
+
+---
+
+# File Directory (CTRL+F a filename for a description): 
 
 acr_small_world.py - Holds the individual function calls for the small world analysis, using functions found in the small_world_networkx.py file.
 
