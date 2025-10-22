@@ -20,6 +20,8 @@ An Anaconda environment was created and used with the code. All active dependenc
 
 Arpeggio was installed separately and ran within its own environment. Dependencies needed to run Arpeggio are NOT included within the above "requirements.txt" file. To learn how to install Arpeggio (maintained by PDBeurope), please refer to its Github found here: https://github.com/PDBeurope/arpeggio . 
 
+Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pitt, David B Ascher, Tom L Blundell, Arpeggio: A Web Server for Calculating and Visualising Interatomic Interactions in Protein Structures. Journal of Molecular Biology, Volume 429, Issue 3, 2017, Pages 365-371, ISSN 0022-2836.
+
 ## The general high-level workflow is the following:
 
 1. Source PDB data
@@ -43,6 +45,10 @@ Arpeggio was installed separately and ran within its own environment. Dependenci
 
 ---
 # Data (roughly 9 GB)
+
+This work uses data from the Protein Data Bank. Data provided by the RCSB PDB (rcsb.org) [1]. 
+
+Citation: H.M. Berman, J. Westbrook, Z. Feng, G. Gilliland, T.N. Bhat, H. Weissig, I.N. Shindyalov, P.E. Bourne. (2000) The Protein Data Bank Nucleic Acids Research, 28: 235-242.
 
 Important Files (Size: 966 MB) - This folder contains files used in paper. 
 
