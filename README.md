@@ -42,6 +42,40 @@ Arpeggio was installed separately and ran within its own environment. Dependenci
 - Creation of CSVs to hold PCN/RIG data such as keeping track of individual residue degree or closeness centrality values
 
 ---
+# Data (roughly 9 GB)
+
+Important Files (Size: 966 MB) - This folder contains files used in paper. 
+
+- 3 main Acr data: centrality and node information for both PCNs and RIGs of AcrIF1, AcrIIA1, and AcrVIA1
+- 3 main Acr PDB files: PDB files associated with AcrIF1, AcrIIA1, and AcrVIA1
+- Analysis Data: Organism distribution and amino acid analysis distribution
+- Cleaned Centralities: Centrality information for all RIGs for the PISCES data set
+- Cleaned JSONs: JSON representation for all RIGs for the PISCES data set
+- Cleaned PDBs: the converted mmCIF files from the PDBe-Arpeggio cleaning process.
+- Cleaned RIGs: RIGs created using cleaned PDBs 
+- Cleaned SASAs: SASA and RSA information for each protein in PISCES data set
+- mmCIF files: PDBe-Arpeggio cleaning returns a mmCIF, which is then converted to a PDB.
+
+PISCES (Size: 7.54 GB) - This folder contains a mix of used and unused files of the paper and remnants of troubleshooting and testing. Some folders that are explicitly used were copied into Important Files for keeping it clear what was and was not used within the paper. 
+
+Separating the data was an afterthought and many of the .py files path to this folder, and so it must be included. 
+
+[deprecated] implies the file was a testing file or from an old or failed run.
+
+- Centralities: same as Cleaned Centralities (Important Files)
+- CIFs: same as mmCIF files (Important Files)
+- CIFs_large: unused data due to size constraints
+- GraphMLs: same as Cleaned RIGs (Important Files)
+- JSONs: same as Cleaned JSONs (Important Files)
+- known acr data: PCNs and RIGs for AcrIF1, AcrIIA1, and AcrVIA1
+- PDBs: PDB files pulled using Protein Data Bank script
+- PDBs_cleaned: [deprecated] from an old run
+- PDBs_compressed: compressed versions of the PDBs
+- SASAs: same as Cleaned SASAs
+- PISCES_culled.fasta: the PISCES call returned some PDBs that had to be filtered for size or for lacking data, these are the remaining PDBs kept for use
+- PISCES_data_info_mutant.csv: contains information about proteins which are considered 'mutants' out of the used PDBs
+- PISCES_data_info: contains information about all proteins pulled (mutants and non-mutants)
+- PISCES_pdbs.txt: a text file with all of the PDB ids used
 
 # File Directory (CTRL+F a filename for a description): 
 
