@@ -213,7 +213,7 @@ def main():
     # place for completed RIGs
     out_dir = PISCES_DIR / "RIGs"
     # place for all your JSONs
-    json_dir = PISCES_DIR / "JSONs"
+    json_dir = IMP_DIR / "Cleaned JSONs" ## Cleaned JSONs
     # place for all your CIFs
     cifs_dir = PISCES_DIR / "CIFs"
     # place for all your graphs

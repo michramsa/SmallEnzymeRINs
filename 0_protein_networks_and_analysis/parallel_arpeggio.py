@@ -139,6 +139,6 @@ def process_all_structures(cifs_dir, out_dir, max_workers=4, max_size_kb=150):
 
 if __name__ == "__main__":
     cifs_dir = PISCES_DIR / "CIFs"  
-    out_dir = PISCES_DIR / "JSONs"
+    out_dir = PISCES_DIR / "JSONs" ## Deprecated - is Cleaned_JSONs
     
     results = process_all_structures(cifs_dir, out_dir, max_workers=4, max_size_kb=350)
