@@ -176,7 +176,7 @@ def unzip_PDBS(pdb_directory, output_directory):
 if __name__ == "__main__":
     filtered_csv_file = PISCES_DIR / "PISCES_data_filtered.csv"
     source_dir = PISCES_DIR / "PDBs_compressed"
-    output_directory = PISCES_DIR / "PDBs"
+    output_directory = PISCES_DIR / "PDBs" ## this needs to be the folder holding all PDBs
 
     ### taking the csv file, sifting through and opening the ones we care about
     # df = pd.read_csv(filtered_csv_file)
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     ## the PDBs need to be in the mmCIF format, which is done via a terminal command, so we're gonna use subprocess to do that
     ## you can make this into a bash script as well
 
-    pdbs_dir = PISCES_DIR / "PDBs"
+    pdbs_dir = PISCES_DIR / "PDBs" ## this needs to be the folder holding all PDBs
     pdbs_clean_dir = PISCES_DIR / "PDBs_cleaned"
     cifs_dir = PISCES_DIR / "CIFs"
 

@@ -219,7 +219,7 @@ def process_file(file, graphs_dir, pdb_dir, centrality_output_dir, sasa_output_d
 def main():
     ## original run
     # graphs_dir = PISCES_DIR / "GraphMLs"
-    # pdb_dir = PISCES_DIR / "PDBs"
+    # pdb_dir = PISCES_DIR / "PDBs" ## this needs to be the folder holding all PDBs
     # sasa_output_dir = PISCES_DIR / "SASAs"
     # centrality_output_dir = PISCES_DIR / "Centralities"
 

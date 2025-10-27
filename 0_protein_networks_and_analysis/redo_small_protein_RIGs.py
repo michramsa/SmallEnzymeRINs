@@ -183,7 +183,7 @@ if __name__ == "__main__":
     # 1. Using the filtered CSV file to sort through all of the PDB.gz files - open all of the ones of interest
 
     csv_dir = PISCES_DIR / "Centralities"
-    all_pdbs = PISCES_DIR / "PDBs"
+    all_pdbs = PISCES_DIR / "PDBs" ## this needs to be the folder holding all PDBs
     output_dir = IMP_DIR / "Cleaned PDBs"
     cif_dir = IMP_DIR / "mmCIF files"
 

@@ -111,10 +111,4 @@ parallel_rig.py - A parallel implementation that mimics the create_RIG.py file, 
 
 retrieve_PISCES_data.py - Uses the output FASTA file from the PISCES server, and then prompts the PDB API to batch download the data. The chosen PDB files are also filtered here (such as checking for mutants, removing membrane proteins, etc.).
 
-rig_analysis.py - Calculations for degree and closeness centrality in batch and as a singular process for graphs. RSA calculations also happen here, but utilize the original, raw PDB files. 
-
-comparison_plots.py - This code creates the figures for the degree and closeness centrality distributions (Figs 1-6). 
-
-sasa_centrality_plots.py - This file creates the figures for RSA/Closeness with or without the residues of interest highlighted, corresponding to Figures 7,8,9.
-
-batch_download.sh - This file is sourced from the RCSB website to help with mass downloading of PDB files. See https://www.rcsb.org/docs/programmatic-access/batch-downloads-with-shell-script .
+rig_analysis.py - Calculations for degree and closeness centrality in batch and as a singular process for graphs. RSA calculations also happen here, but utilize the original, raw PDB files.

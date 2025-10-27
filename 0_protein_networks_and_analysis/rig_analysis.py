@@ -211,7 +211,7 @@ def calculate_sasa(pdb_dir, file_name, sasa_output_dir):
 def main():
     # loop to open graphs
     graphs_dir = PISCES_DIR / "GraphMLs"
-    pdb_dir = PISCES_DIR / "PDBs"
+    pdb_dir = PISCES_DIR / "PDBs" ## this needs to be the folder holding all PDBs
     sasa_output_dir = PISCES_DIR / "SASAs"
     for file in os.listdir(graphs_dir):
         full_name = graphs_dir + "/" + file
