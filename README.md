@@ -1,8 +1,10 @@
+Last updated: 11/12/2025 - Note from michramsa: Forgot to make the repository public and update the title + Zenodo link!
+
 This Github contains the analysis code used for the paper "
 Revisiting graph-based approaches for small protein analysis: Insights from anti-CRISPR protein networks
 ". This is a “cleaned” version of the code (includes all intermediary drafted files that were used to build more refined files) - that said, any possible missing parts or issues, I can be contacted directly to help with here (via Issues).
 
-Data used within the paper can be found in Zenodo here: -INSERT LINK HERE-
+[Data used within the paper can be found in Zenodo here.](https://zenodo.org/records/17415956)
 
 ## Computing Environment Used:
 
