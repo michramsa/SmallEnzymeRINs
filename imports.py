@@ -37,6 +37,7 @@ from matplotlib.colors import ListedColormap
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
+DATA_DIR = BASE_DIR / "3_data"
 
 # deprecated from old version
 # AMITAI_DIR = BASE_DIR / "Amitai"

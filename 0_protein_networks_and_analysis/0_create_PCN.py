@@ -602,43 +602,105 @@ def add_closeness_centrality_to_csv(graphml_file_path, csv_file_path, output_csv
     
 if __name__ == "__main__":
     
-    # hold the pdb file of interest
-    file_name = IMP_DIR / "3 main Acr PDB files/6vrb.pdb"
-    # where you want to save the finished file
-    save_dir = IMP_DIR / "3 main Acr files/"
-    # how you would like the structure name to show up
-    # structure_name = "6vrb"
+    TESTING = True  # Set to False to process all files
+    MAX_TEST_FILES = 3  # Number of files to process in testing mode
+    OUTPUT_DIR = DATA_DIR / "acr_results"
+    LOG_FILE = DATA_DIR / "processing_log.csv"
     
-    # print("Creating multi-chain protein structure network...")
-    # graph, dipoles, volumes = create_multi_chain_graph(
-    #     structure_name, 
-    #     file_name, 
-    #     'both',  # Process all chains
-    #     'alpha',  # Use alpha carbons
-    #     7  # 7 Angstrom threshold
-    # )
+    # Processing parameters
+    THRESHOLD = 7  # Angstroms
+    ATOM_CHOICE = 'alpha'  # 'alpha' or 'beta'
+    CHAIN_CHOICE = 'both'  # 'both' or specific chain ID
     
-    # if graph is not None:
-    #     analyze_graph_by_chain(graph)
-        
-    #     save_graph_with_chain_info(graph, save_dir, structure_name)
-        
-    #     print(f"\nFinal graph statistics:")
-    #     print(f"Total nodes: {graph.number_of_nodes()}")
-    #     print(f"Total edges: {graph.number_of_edges()}")
-    #     print(f"Graph density: {nx.density(graph):.4f}")
-        
-    #     # Check connectivity
-    #     if nx.is_connected(graph):
-    #         print("Graph is connected")
-    #     else:
-    #         components = list(nx.connected_components(graph))
-    #         print(f"Graph has {len(components)} connected components")
-    #         print(f"Largest component size: {len(max(components, key=len))}")
+    print("="*80)
+    print("PROTEIN CONTACT NETWORK BATCH PROCESSING")
+    print("="*80)
+    print(f"Testing mode: {TESTING}")
+    print(f"Base directory: {DATA_DIR}")
+    print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Log file: {LOG_FILE}")
+    print(f"Parameters: threshold={THRESHOLD}Å, atom={ATOM_CHOICE}, chains={CHAIN_CHOICE}")
+    print("="*80)
+    
+    # Find all PDB files
+    print("\nScanning for PDB files...")
+    all_pdb_files = get_all_pdb_files(DATA_DIR)
+    print(f"Found {len(all_pdb_files)} total PDB files")
+    
+    # if len(all_pdb_files) == 0:
+    #     print("No PDB files found. Exiting.")
+    #     exit()
+    
+    # # Load already processed files
+    # print("\nChecking for previously processed files...")
+    # processed_files = load_processed_files(LOG_FILE)
+    
+    # # Filter out already processed files
+    # remaining_files = [
+    #     (pdb_file, acr_type, structure_name) 
+    #     for pdb_file, acr_type, structure_name in all_pdb_files 
+    #     if str(pdb_file) not in processed_files
+    # ]
+    
+    # print(f"Already processed: {len(processed_files)}")
+    # print(f"Remaining to process: {len(remaining_files)}")
+    
+    # # Apply testing limit if needed
+    # if TESTING:
+    #     files_to_process = remaining_files[:MAX_TEST_FILES]
+    #     print(f"\n*** TESTING MODE: Processing only {len(files_to_process)} files ***\n")
     # else:
-    #     print("Failed to create graph")
-
-    graph = IMP_DIR / "3 main Acr files/5Y6A_clean.graphml"
-    csv_file_path = IMP_DIR / "3 main Acr data/5Y6A_RIG_nodes.csv"
-
-    add_closeness_centrality_to_csv(graph,csv_file_path)
+    #     files_to_process = remaining_files
+    
+    # if len(files_to_process) == 0:
+    #     print("\nNo files to process. All files have been completed.")
+    #     exit()
+    
+    # # Process each file
+    # print(f"\nStarting processing of {len(files_to_process)} files...")
+    # print("="*80)
+    
+    # success_count = 0
+    # failure_count = 0
+    
+    # for idx, (pdb_file, acr_type, structure_name) in enumerate(files_to_process, 1):
+    #     print(f"\n[{idx}/{len(files_to_process)}] Processing: {structure_name} ({acr_type})")
+    #     print(f"File: {pdb_file}")
+        
+    #     # Process the PDB file
+    #     success = process_single_pdb(
+    #         pdb_file=pdb_file,
+    #         acr_type=acr_type,
+    #         structure_name=structure_name,
+    #         output_base_dir=OUTPUT_DIR,
+    #         threshold=THRESHOLD,
+    #         atom_choice=ATOM_CHOICE,
+    #         chain_choice=CHAIN_CHOICE
+    #     )
+        
+    #     # Log the result
+    #     if success:
+    #         log_processed_file(LOG_FILE, pdb_file, acr_type, 'success')
+    #         success_count += 1
+    #         print(f"✓ SUCCESS: {structure_name}")
+    #     else:
+    #         error_msg = "Graph creation returned None"
+    #         log_processed_file(LOG_FILE, pdb_file, acr_type, 'failure', error_msg)
+    #         failure_count += 1
+    #         print(f"✗ FAILED: {structure_name}")
+        
+    #     # Progress summary
+    #     print(f"Progress: {success_count} succeeded, {failure_count} failed")
+    #     print("-"*80)
+    
+    # # Final summary
+    # print("\n" + "="*80)
+    # print("PROCESSING COMPLETE")
+    # print("="*80)
+    # print(f"Total processed: {len(files_to_process)}")
+    # print(f"Successful: {success_count}")
+    # print(f"Failed: {failure_count}")
+    # print(f"Success rate: {100*success_count/len(files_to_process):.1f}%")
+    # print(f"\nLog file: {LOG_FILE}")
+    # print(f"Output directory: {OUTPUT_DIR}")
+    # print("="*80)
