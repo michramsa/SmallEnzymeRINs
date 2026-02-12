@@ -1,4 +1,4 @@
-# 6/4/2025
+# 2/11/2026
 # Create PCNs (protein contact networks)
 # Only uses first model for NMR structures
 # Threshold is 7 angstroms
@@ -47,22 +47,13 @@ def calc_dist_matrix(chain1, chain2, threshold, choice):
                 if dist <= threshold:
                     ans[row, col] = 1
             except Exception as e:
-                # Skip problematic residue pairs
+                print("Calc_residue_distance failure")
                 continue
     
     return ans
 
+# an NMR structure will have multiple models - returns a boolean
 def is_nmr_structure(structure):
-    """
-    Check if the structure is an NMR structure by examining the number of models.
-    NMR structures typically have multiple models.
-    
-    Parameters:
-    - structure: Bio.PDB structure object
-    
-    Returns:
-    - bool: True if NMR structure (multiple models), False otherwise
-    """
     return len(list(structure.get_models())) > 1
 
 def create_nmr_graph(structure_name, structure_file, chain_choice, atom_choice, threshold):
@@ -386,6 +377,33 @@ def save_graph_with_chain_info(graph, save_path_base, structure_name):
     df.to_csv(node_info_path, index=False)
     print(f"Node information saved to: {node_info_path}")
 
+def get_closeness_value(node_id, closeness_centrality):
+    """
+    Get closeness centrality value for a node, handling type conversion between node ID formats.
+    
+    Parameters:
+    - node_id: The node identifier (can be int or string)
+    - closeness_centrality: Dictionary mapping node IDs to closeness centrality values
+    
+    Returns:
+    - Closeness centrality value for the node, or None if not found
+    """
+    # Try the node_id as-is first
+    if node_id in closeness_centrality:
+        return closeness_centrality[node_id]
+    # Try converting to string
+    elif str(node_id) in closeness_centrality:
+        return closeness_centrality[str(node_id)]
+    # Try converting to int (if the node_id is a string that represents an int)
+    else:
+        try:
+            int_node_id = int(node_id)
+            if int_node_id in closeness_centrality:
+                return closeness_centrality[int_node_id]
+        except (ValueError, TypeError):
+            pass
+    return None
+
 def add_closeness_centrality_to_csv(graphml_file_path, csv_file_path, output_csv_path=None):
     """
     Load an existing GraphML file, calculate closeness centrality for each node,
@@ -431,26 +449,10 @@ def add_closeness_centrality_to_csv(graphml_file_path, csv_file_path, output_csv
     print(f"Sample graph node IDs: {graph_node_sample} (type: {type(graph_node_sample[0]) if graph_node_sample else 'N/A'})")
     print(f"Sample CSV node IDs: {csv_node_sample} (type: {type(csv_node_sample[0]) if csv_node_sample else 'N/A'})")
     
-    # Create a mapping function that handles type conversion
-    def get_closeness_value(node_id):
-        # Try the node_id as-is first
-        if node_id in closeness_centrality:
-            return closeness_centrality[node_id]
-        # Try converting to string
-        elif str(node_id) in closeness_centrality:
-            return closeness_centrality[str(node_id)]
-        # Try converting to int (if the node_id is a string that represents an int)
-        else:
-            try:
-                int_node_id = int(node_id)
-                if int_node_id in closeness_centrality:
-                    return closeness_centrality[int_node_id]
-            except (ValueError, TypeError):
-                pass
-        return None
-    
     # Add closeness centrality values to the dataframe
-    df['closeness_centrality'] = df['node_id'].apply(get_closeness_value)
+    # lambda being used to shorthand define a function because apply can only pass one argument but get_closeness_value needs 2 arguments
+    # you can expand this if you want - it will just be "chunkier" (aka you'd need another function to make apply work)
+    df['closeness_centrality'] = df['node_id'].apply(lambda node_id: get_closeness_value(node_id, closeness_centrality))
     
     # Check for any missing values (nodes that don't exist in the graph)
     missing_nodes = df[df['closeness_centrality'].isna()]

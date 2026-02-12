@@ -37,11 +37,13 @@ from matplotlib.colors import ListedColormap
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
-AMITAI_DIR = BASE_DIR / "Amitai"
-FIGS_DIR = BASE_DIR / "Figure creation"
-GEN_DATA_DIR = BASE_DIR / "General Data Analysis"
-IMP_DIR = BASE_DIR / "Important Files"
-KNOWN_DIR = BASE_DIR / "known acrs"
-PISCES_DIR = BASE_DIR / "PISCES"
+
+# deprecated from old version
+# AMITAI_DIR = BASE_DIR / "Amitai"
+# FIGS_DIR = BASE_DIR / "Figure creation"
+# GEN_DATA_DIR = BASE_DIR / "General Data Analysis"
+# IMP_DIR = BASE_DIR / "Important Files"
+# KNOWN_DIR = BASE_DIR / "known acrs"
+# PISCES_DIR = BASE_DIR / "PISCES"
 
 
