@@ -377,6 +377,131 @@ def save_graph_with_chain_info(graph, save_path_base, structure_name):
     df.to_csv(node_info_path, index=False)
     print(f"Node information saved to: {node_info_path}")
 
+def get_all_pdb_files(base_dir):
+    """
+    Recursively find all PDB files in the directory structure.
+    
+    Parameters:
+    - base_dir: Base directory containing Acr_PDB folder structure
+    
+    Returns:
+    - List of tuples: (pdb_file_path, acr_type, structure_name)
+    """
+    pdb_files = []
+    acr_pdb_dir = Path(base_dir) / "all_acrs" / "Acr_PDB"
+    
+    if not acr_pdb_dir.exists():
+        print(f"Warning: {acr_pdb_dir} does not exist")
+        return pdb_files
+    
+    # Iterate through Acr type directories (e.g., AcrIA, AcrIB, etc.)
+    for acr_type_dir in acr_pdb_dir.iterdir():
+        if acr_type_dir.is_dir():
+            acr_type = acr_type_dir.name
+            
+            # Find all .pdb files in this Acr type directory
+            for pdb_file in acr_type_dir.glob("*.pdb"):
+                structure_name = pdb_file.stem  # Filename without extension
+                pdb_files.append((pdb_file, acr_type, structure_name))
+    
+    return pdb_files
+
+def load_processed_files(log_file):
+    """
+    Load the set of successfully processed PDB files from the log.
+    
+    Parameters:
+    - log_file: Path to the processing log CSV file
+    
+    Returns:
+    - Set of PDB file paths that were successfully processed
+    """
+    processed = set()
+    
+    if Path(log_file).exists():
+        try:
+            df = pd.read_csv(log_file)
+            # Only include files that were successfully processed
+            successful = df[df['status'] == 'success']['pdb_file'].tolist()
+            processed = set(successful)
+            print(f"Loaded {len(processed)} previously processed files from log")
+        except Exception as e:
+            print(f"Warning: Could not load log file: {e}")
+    
+    return processed
+
+def log_processed_file(log_file, pdb_file, acr_type, status, error_message=""):
+    """
+    Log the processing status of a PDB file.
+    
+    Parameters:
+    - log_file: Path to the log CSV file
+    - pdb_file: Path to the PDB file
+    - acr_type: Type of Acr protein
+    - status: 'success' or 'failure'
+    - error_message: Error details if status is 'failure'
+    """
+    from datetime import datetime
+    
+    log_entry = {
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'pdb_file': str(pdb_file),
+        'acr_type': acr_type,
+        'status': status,
+        'error_message': error_message
+    }
+    
+    # Create DataFrame with single row
+    df_new = pd.DataFrame([log_entry])
+    
+    # Append to existing log or create new one
+    if Path(log_file).exists():
+        df_new.to_csv(log_file, mode='a', header=False, index=False)
+    else:
+        df_new.to_csv(log_file, mode='w', header=True, index=False)
+
+def process_single_pdb(pdb_file, acr_type, structure_name, output_base_dir, threshold, atom_choice, chain_choice):
+    """
+    Process a single PDB file to create protein contact network.
+    
+    Parameters:
+    - pdb_file: Path to PDB file
+    - acr_type: Type of Acr protein (e.g., 'AcrIA')
+    - structure_name: Name for the structure (filename without extension)
+    - output_base_dir: Base directory for output files
+    - threshold: Distance threshold in Angstroms
+    - atom_choice: 'alpha' or 'beta'
+    - chain_choice: 'both' or specific chain ID
+    
+    Returns:
+    - True if successful, False if failed
+    """
+    try:
+        # Create output directory matching input structure
+        output_dir = Path(output_base_dir) / acr_type
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create graph
+        graph, dipoles, volumes = create_multi_chain_graph(
+            structure_name,
+            pdb_file,
+            chain_choice,
+            atom_choice,
+            threshold
+        )
+        
+        if graph is None:
+            return False
+        
+        # Save graph files
+        save_graph_with_chain_info(graph, str(output_dir) + "/", structure_name)
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error processing {pdb_file}: {e}")
+        return False
+
 def get_closeness_value(node_id, closeness_centrality):
     """
     Get closeness centrality value for a node, handling type conversion between node ID formats.
