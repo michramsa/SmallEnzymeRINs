@@ -1,0 +1,151 @@
+Checking PDB files...
+
+============================================================
+FILE SIZE SUMMARY: .pdb files
+Directory: -redacted-
+============================================================
+  Total files:  3687
+  Min:          38.0 KB
+  Max:          406.4 KB
+  Mean:         152.3 KB
+  Median:       160.7 KB
+
+  Size distribution:
+         0 -     50 KB:     17 files  (cumulative:    17 = 0.5%)
+        50 -    100 KB:    538 files  (cumulative:   555 = 15.1%)
+       100 -    150 KB:    929 files  (cumulative:  1484 = 40.2%)
+       150 -    200 KB:   1999 files  (cumulative:  3483 = 94.5%)
+       200 -    350 KB:    201 files  (cumulative:  3684 = 99.9%)
+       350 -    500 KB:      3 files  (cumulative:  3687 = 100.0%)
+       500 -   1000 KB:      0 files  (cumulative:  3687 = 100.0%)
+      1000 -   5000 KB:      0 files  (cumulative:  3687 = 100.0%)
+      5000 -  10000 KB:      0 files  (cumulative:  3687 = 100.0%)
+
+  Per Acr type:
+    AcrIA              1 files  min=375  max=375  mean=375 KB
+    AcrIB              1 files  min=251  max=251  mean=251 KB
+    AcrIC1             1 files  min=234  max=234  mean=234 KB
+    AcrIC10            1 files  min=115  max=115  mean=115 KB
+    AcrIC3             1 files  min=120  max=120  mean=120 KB
+    AcrIC4             1 files  min=71  max=71  mean=71 KB
+    AcrIC5             1 files  min=73  max=73  mean=73 KB
+    AcrIC6             1 files  min=173  max=173  mean=173 KB
+    AcrIC7             1 files  min=113  max=113  mean=113 KB
+    AcrIC8             1 files  min=104  max=104  mean=104 KB
+    AcrIC9             1 files  min=97  max=97  mean=97 KB
+    AcrID1            52 files  min=50  max=187  mean=137 KB
+    AcrIE1           117 files  min=63  max=140  mean=130 KB
+    AcrIE2            32 files  min=101  max=118  mean=115 KB
+    AcrIE3            64 files  min=43  max=83  mean=81 KB
+    AcrIE4             1 files  min=63  max=63  mean=63 KB
+    AcrIE4-F7          2 files  min=75  max=145  mean=110 KB
+    AcrIE5             2 files  min=81  max=81  mean=81 KB
+    AcrIE6             2 files  min=100  max=100  mean=100 KB
+    AcrIE7             2 files  min=134  max=134  mean=134 KB
+    AcrIE8.1           1 files  min=79  max=79  mean=79 KB
+    AcrIE8.2           1 files  min=78  max=78  mean=78 KB
+    AcrIE9             1 files  min=89  max=89  mean=89 KB
+    AcrIF1            41 files  min=97  max=100  mean=98 KB
+    AcrIF10            3 files  min=120  max=122  mean=121 KB
+    AcrIF11          172 files  min=83  max=232  mean=177 KB
+    AcrIF12           85 files  min=79  max=156  mean=155 KB
+    AcrIF13            5 files  min=138  max=139  mean=139 KB
+    AcrIF14            8 files  min=157  max=162  mean=160 KB
+    AcrIF15            1 files  min=87  max=87  mean=87 KB
+    AcrIF16            1 files  min=225  max=225  mean=225 KB
+    AcrIF17.1          1 files  min=152  max=152  mean=152 KB
+    AcrIF18.1          1 files  min=81  max=81  mean=81 KB
+    AcrIF18.2          1 files  min=82  max=82  mean=82 KB
+    AcrIF19            1 files  min=120  max=120  mean=120 KB
+    AcrIF2            35 files  min=55  max=114  mean=104 KB
+    AcrIF20.1          1 files  min=149  max=149  mean=149 KB
+    AcrIF20.2          1 files  min=150  max=150  mean=150 KB
+    AcrIF21            1 files  min=200  max=200  mean=200 KB
+    AcrIF22            1 files  min=109  max=109  mean=109 KB
+    AcrIF23            1 files  min=193  max=193  mean=193 KB
+    AcrIF24            1 files  min=277  max=277  mean=277 KB
+    AcrIF3           191 files  min=85  max=179  mean=166 KB
+    AcrIF4            53 files  min=62  max=121  mean=120 KB
+    AcrIF5            40 files  min=47  max=96  mean=93 KB
+    AcrIF6            43 files  min=60  max=336  mean=124 KB
+    AcrIF6Mfr          1 files  min=104  max=104  mean=104 KB
+    AcrIF6Osm          1 files  min=107  max=107  mean=107 KB
+    AcrIF7            66 files  min=41  max=103  mean=83 KB
+    AcrIF8             3 files  min=97  max=134  mean=109 KB
+    AcrIF8Del          1 files  min=96  max=96  mean=96 KB
+    AcrIF8Pec          1 files  min=112  max=112  mean=112 KB
+    AcrIF8Pfl          1 files  min=100  max=100  mean=100 KB
+    AcrIF9            15 files  min=87  max=137  mean=97 KB
+    AcrIIA             1 files  min=88  max=88  mean=88 KB
+    AcrIIA1          350 files  min=49  max=228  mean=190 KB
+    AcrIIA10           3 files  min=67  max=135  mean=112 KB
+    AcrIIA11          28 files  min=122  max=316  mean=236 KB
+    AcrIIA11a.1        1 files  min=240  max=240  mean=240 KB
+    AcrIIA11a.3        1 files  min=241  max=241  mean=241 KB
+    AcrIIA11b.3        1 files  min=188  max=188  mean=188 KB
+    AcrIIA11c.5        1 files  min=311  max=311  mean=311 KB
+    AcrIIA12           1 files  min=55  max=55  mean=55 KB
+    AcrIIA13           1 files  min=166  max=166  mean=166 KB
+    AcrIIA13b          1 files  min=165  max=165  mean=165 KB
+    AcrIIA15           1 files  min=112  max=112  mean=112 KB
+    AcrIIA16           2 files  min=261  max=268  mean=264 KB
+    AcrIIA17           2 files  min=130  max=140  mean=135 KB
+    AcrIIA18           2 files  min=226  max=228  mean=227 KB
+    AcrIIA19           2 files  min=75  max=163  mean=119 KB
+    AcrIIA2          230 files  min=75  max=165  mean=149 KB
+    AcrIIA20           1 files  min=41  max=41  mean=41 KB
+    AcrIIA21           1 files  min=71  max=71  mean=71 KB
+    AcrIIA22           1 files  min=67  max=67  mean=67 KB
+    AcrIIA24           1 files  min=131  max=131  mean=131 KB
+    AcrIIA25           1 files  min=125  max=125  mean=125 KB
+    AcrIIA25.1         1 files  min=133  max=133  mean=133 KB
+    AcrIIA26           1 files  min=230  max=230  mean=230 KB
+    AcrIIA27           1 files  min=106  max=106  mean=106 KB
+    AcrIIA28           1 files  min=117  max=117  mean=117 KB
+    AcrIIA29           1 files  min=320  max=320  mean=320 KB
+    AcrIIA3          146 files  min=82  max=163  mean=161 KB
+    AcrIIA30           1 files  min=98  max=98  mean=98 KB
+    AcrIIA31           1 files  min=86  max=86  mean=86 KB
+    AcrIIA32           1 files  min=187  max=187  mean=187 KB
+    AcrIIA32.1         1 files  min=126  max=126  mean=126 KB
+    AcrIIA4          136 files  min=56  max=204  mean=108 KB
+    AcrIIA5            9 files  min=93  max=192  mean=178 KB
+    AcrIIA5_D1126      1 files  min=187  max=187  mean=187 KB
+    AcrIIA6           20 files  min=202  max=252  mean=237 KB
+    AcrIIA6_DT1        1 files  min=236  max=236  mean=236 KB
+    AcrIIA7          548 files  min=38  max=303  mean=132 KB
+    AcrIIA8           52 files  min=65  max=141  mean=130 KB
+    AcrIIA9          849 files  min=54  max=293  mean=170 KB
+    AcrIIC1           11 files  min=50  max=180  mean=118 KB
+    AcrIIC2           92 files  min=78  max=163  mean=153 KB
+    AcrIIC3           47 files  min=73  max=176  mean=143 KB
+    AcrIIC4            2 files  min=56  max=111  mean=84 KB
+    AcrIIC5            3 files  min=164  max=164  mean=164 KB
+    AcrIIC6            1 files  min=98  max=98  mean=98 KB
+    AcrIII1            1 files  min=149  max=149  mean=149 KB
+    AcrIIIB1           1 files  min=324  max=324  mean=324 KB
+    AcrVA1             6 files  min=84  max=216  mean=128 KB
+    AcrVA2             4 files  min=144  max=406  mean=294 KB
+    AcrVA3            13 files  min=113  max=236  mean=201 KB
+    AcrVA4             1 files  min=302  max=302  mean=302 KB
+    AcrVA5             4 files  min=114  max=114  mean=114 KB
+    AcrVIA1            2 files  min=103  max=304  mean=203 KB
+    AcrVIA2            1 files  min=95  max=95  mean=95 KB
+    AcrVIA3            1 files  min=109  max=109  mean=109 KB
+    AcrVIA4            1 files  min=99  max=99  mean=99 KB
+    AcrVIA5            1 files  min=169  max=169  mean=169 KB
+    AcrVIA6            1 files  min=107  max=107  mean=107 KB
+    AcrVIA7            1 files  min=202  max=202  mean=202 KB
+    AcrVIB            24 files  min=101  max=319  mean=271 KB
+
+  Top 10 largest files:
+    WP_021677658.1.pdb                       317.4 KB
+    ERJ81988.1.pdb                           317.4 KB
+    WP_039445052.1.pdb                       319.0 KB
+    WP_136281566.1.pdb                       320.1 KB
+    NP_666582.1.pdb                          324.4 KB
+    WP_022099264.1.pdb                       336.0 KB
+    CDA45388.1.pdb                           336.0 KB
+    AAR27922.1.pdb                           375.1 KB
+    AKG12143.1.pdb                           402.4 KB
+    AKG19228.1.pdb                           406.4 KB
