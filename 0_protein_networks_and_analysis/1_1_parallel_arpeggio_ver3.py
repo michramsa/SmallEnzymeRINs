@@ -1,4 +1,4 @@
-# Parallel Arpeggio Pipeline
+# Parallel Arpeggio Pipeline (v4 – incremental logging)
 # Runs clean -> CIF -> Arpeggio in parallel across multiple PDB files.
 
 import os
@@ -20,30 +20,30 @@ ARPEGGIO_TIMEOUT = 1800   # 30 min (1800 seconds) timeout per structure
 def get_all_pdb_files(base_dir):
     """
     Recursively find all PDB files in the directory structure.
-    
+
     Returns list of tuples: (pdb_file_path, acr_type, structure_name)
     """
     pdb_files = []
     acr_pdb_dir = Path(base_dir) / "all_acrs" / "Acr_PDB"
-    
+
     if not acr_pdb_dir.exists():
         print(f"Warning: {acr_pdb_dir} does not exist")
         return pdb_files
-    
+
     for acr_type_dir in acr_pdb_dir.iterdir():
         if acr_type_dir.is_dir():
             acr_type = acr_type_dir.name
             for pdb_file in acr_type_dir.glob("*.pdb"):
                 structure_name = pdb_file.stem
                 pdb_files.append((pdb_file, acr_type, structure_name))
-    
+
     return pdb_files
 
 
 def process_structure(pdb_file, acr_type, structure_name, cleaned_dir, cifs_dir, jsons_dir):
     """
     Run the full pipeline for a single structure: clean -> CIF -> Arpeggio.
-    
+
     Returns a dict with status info for logging/summary.
     """
     clean_out_dir = cleaned_dir / acr_type
@@ -60,7 +60,8 @@ def process_structure(pdb_file, acr_type, structure_name, cleaned_dir, cifs_dir,
         'step_failed': None,
         'error': None,
         'elapsed': 0,
-        'skipped_size': False
+        'skipped_size': False,
+        'skipped_existing': False
     }
 
     start_time = time.time()
@@ -110,41 +111,65 @@ def process_structure(pdb_file, acr_type, structure_name, cleaned_dir, cifs_dir,
     # 3. Run Arpeggio (with size filter)
     # ------------------------------------------------------------------
     arpeggio_stem = cif_path.name.split(".")[0]
+    print(arpeggio_stem)
     json_path = json_out_dir / f"{arpeggio_stem}.json"
 
-    if not json_path.exists():
-        # Check file size before running arpeggio
-        file_size_kb = os.path.getsize(cif_path) / 1024
-        if file_size_kb > MAX_SIZE_KB:
-            result_info['status'] = 'skipped'
-            result_info['skipped_size'] = True
-            result_info['error'] = f"CIF size {file_size_kb:.1f} KB exceeds limit {MAX_SIZE_KB} KB"
-            result_info['elapsed'] = time.time() - start_time
-            return result_info
+    if json_path.exists():
+        result_info['skipped_existing'] = True
+        result_info['elapsed'] = time.time() - start_time
+        return result_info
 
-        try:
-            subprocess.run(
-                ["pdbe-arpeggio", str(cif_path), "-sa", "-co", "1.0", "-o", str(json_out_dir)],
-                check=True,
-                timeout=ARPEGGIO_TIMEOUT,
-                capture_output=True,
-                text=True
-            )
-        except subprocess.TimeoutExpired:
-            result_info['status'] = 'failed'
-            result_info['step_failed'] = 'ARPEGGIO'
-            result_info['error'] = f"Timeout after {ARPEGGIO_TIMEOUT}s"
-            result_info['elapsed'] = time.time() - start_time
-            return result_info
-        except Exception as e:
-            result_info['status'] = 'failed'
-            result_info['step_failed'] = 'ARPEGGIO'
-            result_info['error'] = str(e)
-            result_info['elapsed'] = time.time() - start_time
-            return result_info
+    # Check file size before running arpeggio
+    file_size_kb = os.path.getsize(cif_path) / 1024
+    if file_size_kb > MAX_SIZE_KB:
+        result_info['status'] = 'skipped'
+        result_info['skipped_size'] = True
+        result_info['error'] = f"CIF size {file_size_kb:.1f} KB exceeds limit {MAX_SIZE_KB} KB"
+        result_info['elapsed'] = time.time() - start_time
+        return result_info
+
+    try:
+        subprocess.run(
+            ["pdbe-arpeggio", str(cif_path), "-sa", "-co", "1.0", "-o", str(json_out_dir)],
+            check=True,
+            timeout=ARPEGGIO_TIMEOUT,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.TimeoutExpired:
+        result_info['status'] = 'failed'
+        result_info['step_failed'] = 'ARPEGGIO'
+        result_info['error'] = f"Timeout after {ARPEGGIO_TIMEOUT}s"
+        result_info['elapsed'] = time.time() - start_time
+        return result_info
+    except Exception as e:
+        result_info['status'] = 'failed'
+        result_info['step_failed'] = 'ARPEGGIO'
+        result_info['error'] = str(e)
+        result_info['elapsed'] = time.time() - start_time
+        return result_info
 
     result_info['elapsed'] = time.time() - start_time
     return result_info
+
+
+def write_log_entry(log_file_handle, result):
+    """Write a single result to the log file and flush immediately."""
+    status = result['status'].upper()
+    if result.get('skipped_existing'):
+        status = "EXISTED"
+
+    line = (
+        f"[{status:<7}] {result['acr_type']}/{result['structure']}"
+        f"  ({result['elapsed']:.1f}s)"
+    )
+    if result.get('step_failed'):
+        line += f"  step={result['step_failed']}"
+    if result.get('error'):
+        line += f"  error={result['error']}"
+
+    log_file_handle.write(line + "\n")
+    log_file_handle.flush()
 
 
 if __name__ == "__main__":
@@ -165,72 +190,91 @@ if __name__ == "__main__":
     # pdb_files = pdb_files[:5]
     # print(f"test: run on {len(pdb_files)} files: {[s for _, _, s in pdb_files]}")
 
-    ## Run in parallel
-    results = []
-    print(f"Starting parallel processing with {MAX_WORKERS} workers...")
-
-    with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_file = {
-            executor.submit(
-                process_structure,
-                pdb_file, acr_type, structure_name,
-                cleaned_dir, cifs_dir, jsons_dir
-            ): structure_name
-            for pdb_file, acr_type, structure_name in pdb_files
-        }
-
-        for future in concurrent.futures.as_completed(future_to_file):
-            name = future_to_file[future]
-            try:
-                result = future.result()
-                results.append(result)
-                status_char = "OK" if result['status'] == 'success' else "FAIL" if result['status'] == 'failed' else "SKIP"
-                print(f"  [{status_char}] {result['acr_type']}/{result['structure']} "
-                      f"({result['elapsed']:.1f}s) {result.get('step_failed') or ''}")
-            except Exception as exc:
-                print(f"  [ERR] {name} raised exception: {exc}")
-                results.append({
-                    'acr_type': '?', 'structure': name,
-                    'status': 'failed', 'step_failed': 'EXECUTOR',
-                    'error': str(exc), 'elapsed': 0
-                })
-
-    ## Summary
-    successes = [r for r in results if r['status'] == 'success']
-    failures  = [r for r in results if r['status'] == 'failed']
-    skipped   = [r for r in results if r['status'] == 'skipped']
-
-    print(f"\n{'='*60}")
-    print(f"PIPELINE COMPLETE")
-    print(f"  Successful:     {len(successes)}")
-    print(f"  Failed:         {len(failures)}")
-    print(f"  Skipped (size): {len(skipped)}")
-    if successes:
-        avg = sum(r['elapsed'] for r in successes) / len(successes)
-        print(f"  Avg time per structure: {avg:.1f}s")
-    print(f"{'='*60}")
-
-    ## Write log file
+    ## Open log file BEFORE the executor so every result is recorded incrementally
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"arpeggio_run_{timestamp}.log"
-    with open(log_file, "w") as f:
-        f.write(f"Arpeggio pipeline run: {datetime.now()}\n")
-        f.write(f"Workers: {MAX_WORKERS}\n")
-        f.write(f"Total files: {len(pdb_files)}\n")
-        f.write(f"Successful: {len(successes)}\n")
-        f.write(f"Failed: {len(failures)}\n")
-        f.write(f"Skipped (size): {len(skipped)}\n\n")
 
-        if failures:
-            f.write("FAILURES:\n")
-            for r in failures:
-                f.write(f"  {r['acr_type']}/{r['structure']} "
-                        f"step={r['step_failed']} error={r['error']}\n")
+    with open(log_file, "w") as log_fh:
+        # Write header
+        log_fh.write(f"Arpeggio pipeline run: {datetime.now()}\n")
+        log_fh.write(f"Workers: {MAX_WORKERS}\n")
+        log_fh.write(f"Total files: {len(pdb_files)}\n")
+        log_fh.write(f"{'='*60}\n\n")
+        log_fh.flush()
 
-        if skipped:
-            f.write("\nSKIPPED (size limit):\n")
-            for r in skipped:
-                f.write(f"  {r['acr_type']}/{r['structure']} - {r['error']}\n")
+        ## Run in parallel
+        results = []
+        completed = 0
+        print(f"Starting parallel processing with {MAX_WORKERS} workers...")
+        print(f"Log file: {log_file}\n")
 
-    print(f"Log written to: {log_file}")
+        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            future_to_file = {
+                executor.submit(
+                    process_structure,
+                    pdb_file, acr_type, structure_name,
+                    cleaned_dir, cifs_dir, jsons_dir
+                ): structure_name
+                for pdb_file, acr_type, structure_name in pdb_files
+            }
+
+            for future in concurrent.futures.as_completed(future_to_file):
+                name = future_to_file[future]
+                completed += 1
+                progress = f"[{completed}/{len(pdb_files)}]"
+
+                try:
+                    result = future.result()
+                    results.append(result)
+
+                    if result.get('skipped_existing'):
+                        tag = "EXISTED"
+                    elif result['status'] == 'success':
+                        tag = "OK"
+                    elif result['status'] == 'failed':
+                        tag = "FAIL"
+                    else:
+                        tag = "SKIP"
+
+                    print(f"  {progress} [{tag:<7}] {result['acr_type']}/{result['structure']} "
+                          f"({result['elapsed']:.1f}s) {result.get('step_failed') or ''}")
+
+                    # Write to log immediately
+                    write_log_entry(log_fh, result)
+
+                except Exception as exc:
+                    print(f"  {progress} [ERR    ] {name} raised exception: {exc}")
+                    err_result = {
+                        'acr_type': '?', 'structure': name,
+                        'status': 'failed', 'step_failed': 'EXECUTOR',
+                        'error': str(exc), 'elapsed': 0
+                    }
+                    results.append(err_result)
+                    write_log_entry(log_fh, err_result)
+
+        ## Summary (written to both console and log)
+        successes = [r for r in results if r['status'] == 'success']
+        failures  = [r for r in results if r['status'] == 'failed']
+        skipped   = [r for r in results if r['status'] == 'skipped']
+        existed   = [r for r in results if r.get('skipped_existing')]
+
+        summary_lines = [
+            f"\n{'='*60}",
+            "PIPELINE COMPLETE",
+            f"  Successful:         {len(successes)}",
+            f"  Already existed:    {len(existed)}",
+            f"  Failed:             {len(failures)}",
+            f"  Skipped (size):     {len(skipped)}",
+        ]
+        if successes:
+            avg = sum(r['elapsed'] for r in successes) / len(successes)
+            summary_lines.append(f"  Avg time (new):     {avg:.1f}s")
+        summary_lines.append(f"{'='*60}")
+
+        for line in summary_lines:
+            print(line)
+            log_fh.write(line + "\n")
+        log_fh.flush()
+
+    print(f"\nLog written to: {log_file}")
     print("Run 2_json_to_rig.py next to convert JSONs to RIG GraphML files.")
