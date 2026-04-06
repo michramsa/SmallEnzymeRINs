@@ -18,6 +18,8 @@ import random
 import glob
 import seaborn as sns
 import logging
+import argparse
+import sys
 
 
 from datetime import datetime
@@ -39,6 +41,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "3_data"
+PROTEIN_DIR = BASE_DIR / "5_protein_analysis"
 
 # deprecated from old version
 # AMITAI_DIR = BASE_DIR / "Amitai"
