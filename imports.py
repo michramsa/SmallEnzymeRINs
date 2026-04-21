@@ -41,7 +41,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "3_data"
-PROTEIN_DIR = BASE_DIR / "5_protein_analysis"
+PROTEIN_DIR = BASE_DIR / "6_Acr_protein_analysis"
+PDB_EXPLORE_DIR = BASE_DIR / "5_PDB_info_exploration"
 
 # deprecated from old version
 # AMITAI_DIR = BASE_DIR / "Amitai"
