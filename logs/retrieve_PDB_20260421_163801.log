@@ -1,0 +1,16 @@
+2026-04-21 16:38:01,295 [INFO] Starting PDB data retrieval pipeline (mmCIF format)
+2026-04-21 16:38:01,308 [INFO] Loaded 3010 entries from /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/resolved_prio_ec.csv
+2026-04-21 16:38:01,311 [INFO] Found 2912 unique PDB IDs
+2026-04-21 16:38:01,311 [INFO] Creating PDB ID text file
+2026-04-21 16:38:01,312 [INFO] PDB ID list written to /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/pdb_ids.txt
+2026-04-21 16:38:01,313 [INFO] Starting parallel download: 2912 PDB IDs, 16 workers
+2026-04-21 16:38:01,313 [INFO] Output directory: /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/enzymes_CIFs_compressed
+2026-04-21 16:39:24,114 [INFO] Download complete — downloaded: 2912, skipped (already present): 0, failed: 0
+2026-04-21 16:39:24,116 [INFO] Checking 3010 entries for mutant status
+2026-04-21 16:40:00,883 [INFO] Mutant check progress: 100/3010
+2026-04-21 16:40:38,034 [INFO] Mutant check progress: 200/3010
+2026-04-21 16:41:13,667 [INFO] Mutant check progress: 300/3010
+2026-04-21 16:41:51,141 [INFO] Mutant check progress: 400/3010
+2026-04-21 16:42:27,144 [INFO] Mutant check progress: 500/3010
+2026-04-21 16:43:03,911 [INFO] Mutant check progress: 600/3010
+2026-04-21 16:43:41,482 [INFO] Mutant check progress: 700/3010

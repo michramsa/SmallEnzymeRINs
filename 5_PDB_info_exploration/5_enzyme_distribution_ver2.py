@@ -208,14 +208,25 @@ if __name__ == "__main__":
 
     ## only looking at monomers
 
-    df_prio = pd.read_csv(INPUT_CSV_PRIO)
+    # df_prio = pd.read_csv(INPUT_CSV_PRIO)
 
-    # Filter to monomers only
-    df_prio_mono = df_prio[df_prio["oligomeric_state"] == "monomeric"].reset_index(drop=True)
+    # # Filter to monomers only
+    # df_prio_mono = df_prio[df_prio["oligomeric_state"] == "monomeric"].reset_index(drop=True)
+
+    # plot_ec_distribution(
+    #     df=df_prio_mono,
+    #     ec_col="prio_ec_number",
+    #     output_fig=FIGURES_DIR / "enzyme_distribution_prio_ec_monomers.png",
+    #     title="Distribution of EC Main Classes\n(Priority EC, Monomers Only)",
+    # )
+    ## Figure 3 - 4/21/ - non-mutants only
+    filename = DATA_DIR / "enzymes" / "enzymes_no_mutants.csv"
+
+    df_prio = pd.read_csv(filename)
 
     plot_ec_distribution(
-        df=df_prio_mono,
+        df=df_prio,
         ec_col="prio_ec_number",
-        output_fig=FIGURES_DIR / "enzyme_distribution_prio_ec_monomers.png",
-        title="Distribution of EC Main Classes\n(Priority EC, Monomers Only)",
-)
+        output_fig=FIGURES_DIR / "enzyme_distribution_prio_ec_no_mutants.png",
+        title="Distribution of EC Main Classes\n(Priority EC and No Mutants)",
+    )

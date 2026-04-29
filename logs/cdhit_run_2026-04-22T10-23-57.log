@@ -1,0 +1,116 @@
+CD-HIT run log
+============================================================
+Timestamp:        2026-04-22T10:23:57.385398
+Elapsed:          0.2 seconds
+Command:          cd-hit -i /home/epi2melabs/AcrNetworks-clean-v2/input_data/enzymes_no_mutants.fasta -o /home/epi2melabs/AcrNetworks-clean-v2/input_data/enzymes_nr90.fasta -c 0.9 -n 5 -M 8000 -T 4 -d 0
+
+Parameters:
+  identity             0.9
+  word_size            5
+  memory_mb            8000
+  threads              4
+
+Input:            /home/epi2melabs/AcrNetworks-clean-v2/input_data/enzymes_no_mutants.fasta
+Input count:      2434
+Output:           /home/epi2melabs/AcrNetworks-clean-v2/input_data/enzymes_nr90.fasta
+Output count:     2434
+Reduction:        0.0%
+
+--- CD-HIT stdout ---
+================================================================
+Program: CD-HIT, V4.8.1 (+OpenMP), Apr 24 2025, 22:00:32
+Command: cd-hit -i
+         /home/epi2melabs/AcrNetworks-clean-v2/input_data/enzymes_no_mutants.fasta
+         -o
+         /home/epi2melabs/AcrNetworks-clean-v2/input_data/enzymes_nr90.fasta
+         -c 0.9 -n 5 -M 8000 -T 4 -d 0
+
+Started: Wed Apr 22 10:23:57 2026
+================================================================
+                            Output                              
+----------------------------------------------------------------
+total seq: 2434
+longest and shortest : 200 and 30
+Total letters: 351459
+Sequences have been sorted
+
+Approximated minimal memory consumption:
+Sequence        : 0M
+Buffer          : 4 X 16M = 64M
+Table           : 2 X 65M = 130M
+Miscellaneous   : 0M
+Total           : 195M
+
+Table limit with the given memory limit:
+Max number of representatives: 4000000
+Max number of word counting entries: 975531752
+
+
+# comparing sequences from          0  to        405
+---------- new table with      405 representatives
+
+# comparing sequences from        405  to        743
+....................
+----------    195 remaining sequences to the next cycle
+---------- new table with      143 representatives
+
+# comparing sequences from        548  to        862
+...................
+----------    189 remaining sequences to the next cycle
+---------- new table with      125 representatives
+
+# comparing sequences from        673  to        966
+....................
+----------    173 remaining sequences to the next cycle
+---------- new table with      120 representatives
+
+# comparing sequences from        793  to       1066
+....................
+----------    165 remaining sequences to the next cycle
+---------- new table with      108 representatives
+
+# comparing sequences from        901  to       1156
+....................
+----------    155 remaining sequences to the next cycle
+---------- new table with      100 representatives
+
+# comparing sequences from       1001  to       1239
+....................
+----------    138 remaining sequences to the next cycle
+---------- new table with      100 representatives
+
+# comparing sequences from       1101  to       1323
+...................
+----------    122 remaining sequences to the next cycle
+---------- new table with      100 representatives
+
+# comparing sequences from       1201  to       1406
+..................
+----------    105 remaining sequences to the next cycle
+---------- new table with      100 representatives
+
+# comparing sequences from       1301  to       1489
+..................
+----------     88 remaining sequences to the next cycle
+---------- new table with      100 representatives
+
+# comparing sequences from       1401  to       1573
+...................
+----------     72 remaining sequences to the next cycle
+---------- new table with      100 representatives
+
+# comparing sequences from       1501  to       2434
+.....................---------- new table with      933 representatives
+
+     2434  finished       2434  clusters
+
+Approximated maximum memory consumption: 196M
+writing new database
+writing clustering information
+program completed !
+
+Total CPU time 0.51
+
+
+--- CD-HIT stderr ---
+

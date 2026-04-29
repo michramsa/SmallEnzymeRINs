@@ -1,0 +1,7 @@
+2026-04-21 17:18:10,892 [INFO] Starting PDB data retrieval pipeline (mmCIF format)
+2026-04-21 17:18:10,902 [INFO] Loaded 3010 entries from /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/resolved_prio_ec.csv
+2026-04-21 17:18:10,905 [INFO] Checking 2912 PDB IDs for rcsb_mutation_count (batch size 50, 4 workers)
+2026-04-21 17:18:15,187 [INFO] Mutation check complete — mutants: 564, wild-type: 2348, missing from API: 0, errors: 0
+2026-04-21 17:18:15,208 [INFO] Mutant-annotated CSV saved
+2026-04-21 17:18:15,222 [INFO] Filtered data saved to /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/enzymes_no_mutants.csv (2434 entries)
+2026-04-21 17:18:15,222 [INFO] Pipeline complete

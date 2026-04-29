@@ -3,8 +3,6 @@
 # Script to download files from RCSB http file download services.
 # Use the -h switch to get help on usage.
 
-echo "Script started"
-
 if ! command -v curl &> /dev/null
 then
     echo "'curl' could not be found. You need to install 'curl' for this script to work."
@@ -72,43 +70,56 @@ then
   echo "Parameter -f must be provided"
   exit 1
 fi
+
+if [ "$outdir" != "." ] && [ ! -d "$outdir" ]; then
+  mkdir -p "$outdir" || { echo "Failed to create output directory: $outdir"; exit 1; }
+fi
 contents=$(cat $listfile)
 
 # see https://stackoverflow.com/questions/918886/how-do-i-split-a-string-on-a-delimiter-in-bash#tab-top
 IFS=',' read -ra tokens <<< "$contents"
 
-echo "Parsed PDB IDs:"
-for token in "${tokens[@]}"; do
-    echo "$token"
-done
-
 for token in "${tokens[@]}"
 do
-  # Remove "_1" suffix if present
-  clean_token="${token%_*}"
+  if [ "$cif" == true ]
+  then
+    download ${token}.cif.gz $outdir
+  fi
+  if [ "$pdb" == true ]
+  then
+    download ${token}.pdb.gz $outdir
+  fi
+  if [ "$pdb1" == true ]
+  then
+    download ${token}.pdb1.gz $outdir
+  fi
+  if [ "$cifassembly1" == true ]
+  then
+    download ${token}-assembly1.cif.gz $outdir
+  fi
+  if [ "$xml" == true ]
+  then
+    download ${token}.xml.gz $outdir
+  fi
+  if [ "$sf" == true ]
+  then
+    download ${token}-sf.cif.gz $outdir
+  fi
+  if [ "$mr" == true ]
+  then
+    download ${token}.mr.gz $outdir
+  fi
+  if [ "$mrstr" == true ]
+  then
+    download ${token}_mr.str.gz $outdir
+  fi
 
-  if [ "$cif" == true ]; then
-    download "${clean_token}.cif.gz" "$outdir"
-  fi
-  if [ "$pdb" == true ]; then
-    download "${clean_token}.pdb.gz" "$outdir"
-  fi
-  if [ "$pdb1" == true ]; then
-    download "${clean_token}.pdb1.gz" "$outdir"
-  fi
-  if [ "$cifassembly1" == true ]; then
-    download "${clean_token}-assembly1.cif.gz" "$outdir"
-  fi
-  if [ "$xml" == true ]; then
-    download "${clean_token}.xml.gz" "$outdir"
-  fi
-  if [ "$sf" == true ]; then
-    download "${clean_token}-sf.cif.gz" "$outdir"
-  fi
-  if [ "$mr" == true ]; then
-    download "${clean_token}.mr.gz" "$outdir"
-  fi
-  if [ "$mrstr" == true ]; then
-    download "${clean_token}_mr.str.gz" "$outdir"
-  fi
 done
+
+
+
+
+
+
+
+

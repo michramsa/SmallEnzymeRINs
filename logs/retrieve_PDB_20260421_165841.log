@@ -1,0 +1,9 @@
+2026-04-21 16:58:41,490 [INFO] Starting PDB data retrieval pipeline (mmCIF format)
+2026-04-21 16:58:41,502 [INFO] Loaded 3010 entries from /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/resolved_prio_ec.csv
+2026-04-21 16:58:41,505 [INFO] Checking 2912 PDB IDs for pdbx_mutation (batch size 50, 4 workers)
+2026-04-21 16:58:44,485 [INFO] Mutation check complete — mutants: 0, wild-type: 0, missing from API: 0, errors: 2912
+2026-04-21 16:58:44,485 [WARNING] Errored IDs (2912): ['1COZ', '1CV8', '1CW0', '1CWS', '1D02', '1D06', '1D0Q', '1D1G', '1D1Q', '1D7C', '1D8U', '1DAQ', '1DBF', '1DFX', '1DO6', '1DT0', '1DWK', '1DZT', '1E20', '1E3B'] ...
+2026-04-21 16:58:44,511 [INFO] Mutant-annotated CSV saved
+2026-04-21 16:58:44,514 [WARNING] 3010 entries had API errors / missing data and are excluded from the filtered set. See mutation_check_status column in enzyme_data_info_mutant.csv
+2026-04-21 16:58:44,522 [INFO] Filtered data saved to /home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/data_filtered.csv (0 entries)
+2026-04-21 16:58:44,522 [INFO] Pipeline complete
