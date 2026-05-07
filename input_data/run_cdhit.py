@@ -226,10 +226,26 @@ if __name__ == "__main__":
     # print(f"  Log saved to: {log_path}")
 
     # Run 2: 30% identity clustering with MMseqs2 (strict)
+    # metadata = run_mmseqs2(
+    #     input_fasta= BASE_DIR / "input_data" / "enzymes_no_mutants.fasta",
+    #     output_prefix= BASE_DIR / "input_data" / "enzymes_nr40",
+    #     identity=0.40,
+    #     coverage=0.8,
+    #     cov_mode=0,
+    # )
+    # log_path = write_log(metadata)
+
+    # print(f"\nDone.")
+    # print(f"  Input:  {metadata['input_sequence_count']} sequences")
+    # print(f"  Output: {metadata['output_sequence_count']} sequences")
+    # print(f"  Reduction: {metadata['reduction_percent']:.1f}%")
+    # print(f"  Log saved to: {log_path}")
+
+    # Run 3 - 5/6/2026 filtered FASTAs only for the enzymes
     metadata = run_mmseqs2(
-        input_fasta= BASE_DIR / "input_data" / "enzymes_no_mutants.fasta",
-        output_prefix= BASE_DIR / "input_data" / "enzymes_nr30",
-        identity=0.3,
+        input_fasta= DATA_DIR / "enzymes" / "mmseq"/ "enzymes_FASTA.fasta",
+        output_prefix= DATA_DIR / "enzymes" / "mmseq"/ "runs" / "050626_enzymes_nr40",
+        identity=0.40,
         coverage=0.8,
         cov_mode=0,
     )

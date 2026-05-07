@@ -8,7 +8,7 @@ import requests
 import io
 import gzip
 import json
-import matplotlib as plt
+import matplotlib.pyplot as plt 
 import shutil
 import time
 import concurrent.futures
@@ -43,6 +43,8 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "3_data"
 PROTEIN_DIR = BASE_DIR / "6_Acr_protein_analysis"
 PDB_EXPLORE_DIR = BASE_DIR / "5_PDB_info_exploration"
+ENZYMES_DIR = DATA_DIR / "enzymes"
+UF_ENZYMES_DIR = DATA_DIR / "enzymes" / "sorted_enzymes_CIFs" / "enzymes_CIF_unflagged"
 
 # deprecated from old version
 # AMITAI_DIR = BASE_DIR / "Amitai"

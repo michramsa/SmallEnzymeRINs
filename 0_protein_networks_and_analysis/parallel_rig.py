@@ -233,7 +233,20 @@ def parallel_arpeggio_to_rig(json_list, out_dir, num_processes=None):
         if len(errors) > 10:
             print(f"  ... and {len(errors) - 10} more errors")
 
+def tester():
+    # 5/4/2026 - tester run with new code 1
+    # test_file = "/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot/1CWX_clean.json"
+    # out_dir = Path("/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot")
+    # process_single_json(test_file, out_dir)
+
+    # 5/4/2026 - tester run with new code 2
+    test_file = "/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot/6AVD_clean.json"
+    out_dir = Path("/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot")
+    process_single_json(test_file, out_dir)
+
 def main():
+    for i in range(0,10):
+        print("Hold for tester")
     # first run params
     # place for completed RIGs
     # out_dir = PISCES_DIR / "RIGs"
@@ -246,27 +259,28 @@ def main():
 
     # second run params - 5/19/2025
     # place for completed RIGs
-    out_dir = IMP_DIR / "Cleaned RIGs"
-    # place for all your JSONs
-    json_dir = IMP_DIR / "Cleaned JSONs"
-    # place for all your CIFs
-    cifs_dir = IMP_DIR / "mmCIF files"
+    # out_dir = IMP_DIR / "Cleaned RIGs"
+    # # place for all your JSONs
+    # json_dir = IMP_DIR / "Cleaned JSONs"
+    # # place for all your CIFs
+    # cifs_dir = IMP_DIR / "mmCIF files"
 
 
     # Get all CIF files and sort by size - also creates out_dir if it doesn't already exist
-    filter_list, oversize_list = size_sort(cifs_dir, out_dir, json_dir, 350)
+    # filter_list, oversize_list = size_sort(cifs_dir, out_dir, json_dir, 350)
     
-    print(f"Found {len(filter_list)} structures to process")
-    if filter_list:
-        print(f"First file to process: {filter_list[0]}")
-    if oversize_list:
-        print(f"First oversized file: {oversize_list[0]}")
+    # print(f"Found {len(filter_list)} structures to process")
+    # if filter_list:
+    #     print(f"First file to process: {filter_list[0]}")
+    # if oversize_list:
+    #     print(f"First oversized file: {oversize_list[0]}")
 
-    # Set the number of processes (optional, defaults to CPU count if not specified)
-    num_processes = 4
+    # # Set the number of processes (optional, defaults to CPU count if not specified)
+    # num_processes = 4
     
-    # Run parallelized conversion
-    parallel_arpeggio_to_rig(filter_list, out_dir, num_processes)
+    # # Run parallelized conversion
+    # parallel_arpeggio_to_rig(filter_list, out_dir, num_processes)
     
 if __name__ == "__main__":
-    main()
+    # main()
+    tester()

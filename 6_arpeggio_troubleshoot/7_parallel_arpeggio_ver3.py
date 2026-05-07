@@ -1,74 +1,72 @@
-# Parallel Arpeggio Pipeline (v4 – CIF-native input)
+# Parallel Arpeggio Pipeline (v5 – CIF-native input)
 # Runs clean_cif -> Arpeggio in parallel across multiple CIF files.
-# Replaces the old clean_pdb -> gemmi convert -> Arpeggio chain.
 #
-# Changes from v3:
-# - Input is mmCIF (not PDB); clean_cif.py replaces clean_pdb.py + gemmi convert
-# - Removed: CLEAN_PDB_SCRIPT, cleaned_dir (PDBs_cleaned), cifs_dir (CIFs)
-# - Added:   CLEAN_CIF_SCRIPT, clean_cif_dir (CIFs_cleaned)
-# - Added:   --single flag for running on a single CIF file (validation/testing)
-# - Directory structure: Acr_CIF/<acr_type>/*.cif  (mirrors old Acr_PDB layout)
+# Changes from v4:
+# - Removed all Path objects; uses os.path throughout
+# - Removed Acr-type/subfolder references
+# - All directory paths are editable string variables in __main__
+# - No terminal flags for batch mode; edit variables directly
+# - --single mode retained for validation/testing
 
 import os
-import argparse
 import subprocess
 import time
 import concurrent.futures
 from datetime import datetime
-from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.parent
-DATA_DIR = BASE_DIR / "3_data"
 
-CLEAN_CIF_SCRIPT = Path(__file__).parent / "clean_cif_ver2.py"
+# ======================================================================
+# CONFIGURABLE CONSTANTS (edit these as needed)
+# ======================================================================
 MAX_WORKERS      = 8      # safe for 14 cores / 20 logical processors
 MAX_SIZE_KB      = 450    # skip CIF files larger than this for Arpeggio
 ARPEGGIO_TIMEOUT = 1800   # 30 min timeout per structure
 
 
-def get_all_cif_files(base_dir):
+def get_all_cif_files(input_dir):
     """
-    Recursively find all CIF files in the Acr_CIF directory structure.
+    Find all CIF files in input_dir.
 
-    Returns list of tuples: (cif_file_path, acr_type, structure_name)
+    Expected structure:
+        input_dir/
+            1A4V.cif
+            2LW5.cif
+            ...
+
+    Returns list of tuples: (cif_file_path, structure_name)
     """
     cif_files = []
-    acr_cif_dir = Path(base_dir) / "all_acrs" / "Acr_CIF"
 
-    if not acr_cif_dir.exists():
-        print(f"Warning: {acr_cif_dir} does not exist")
+    if not os.path.isdir(input_dir):
+        print(f"Warning: {input_dir} does not exist")
         return cif_files
 
-    for acr_type_dir in acr_cif_dir.iterdir():
-        if acr_type_dir.is_dir():
-            acr_type = acr_type_dir.name
-            for cif_file in acr_type_dir.glob("*.cif"):
-                structure_name = cif_file.stem
-                cif_files.append((cif_file, acr_type, structure_name))
+    for filename in os.listdir(input_dir):
+        if filename.endswith(".cif"):
+            cif_path = os.path.join(input_dir, filename)
+            structure_name = os.path.splitext(filename)[0]
+            cif_files.append((cif_path, structure_name))
 
     return cif_files
 
 
-def process_structure(cif_file, acr_type, structure_name, clean_cif_dir, jsons_dir):
+def process_structure(cif_file, structure_name, clean_cif_script,
+                      clean_cif_dir, jsons_dir):
     """
     Run the full pipeline for a single structure: clean_cif -> Arpeggio.
 
     Returns a dict with status info for logging/summary.
     """
-    clean_out_dir = clean_cif_dir
-    json_out_dir  = jsons_dir
-
-    for d in [clean_out_dir, json_out_dir]:
-        d.mkdir(parents=True, exist_ok=True)
+    os.makedirs(clean_cif_dir, exist_ok=True)
+    os.makedirs(jsons_dir, exist_ok=True)
 
     result_info = {
-        'acr_type':         acr_type,
-        'structure':        structure_name,
-        'status':           'success',
-        'step_failed':      None,
-        'error':            None,
-        'elapsed':          0,
-        'skipped_size':     False,
+        'structure':       structure_name,
+        'status':          'success',
+        'step_failed':     None,
+        'error':           None,
+        'elapsed':         0,
+        'skipped_size':    False,
         'skipped_existing': False
     }
 
@@ -76,18 +74,17 @@ def process_structure(cif_file, acr_type, structure_name, clean_cif_dir, jsons_d
 
     # ------------------------------------------------------------------
     # 1. Clean CIF
-    # Replaces: clean_pdb.py + gemmi convert
     # ------------------------------------------------------------------
-    clean_cif_path = clean_out_dir / f"{structure_name}_clean.cif"
+    clean_cif_path = os.path.join(clean_cif_dir, f"{structure_name}_clean.cif")
     print(clean_cif_path)
 
-    if not clean_cif_path.exists():
+    if not os.path.exists(clean_cif_path):
         result = subprocess.run(
-            ["python3", str(CLEAN_CIF_SCRIPT), str(cif_file), str(clean_cif_path)],
+            ["python3", clean_cif_script, cif_file, clean_cif_path],
             capture_output=True,
             text=True
         )
-        if result.returncode != 0 or not clean_cif_path.exists():
+        if result.returncode != 0 or not os.path.exists(clean_cif_path):
             result_info['status']      = 'failed'
             result_info['step_failed'] = 'CLEAN_CIF'
             result_info['error']       = result.stderr
@@ -97,10 +94,10 @@ def process_structure(cif_file, acr_type, structure_name, clean_cif_dir, jsons_d
     # ------------------------------------------------------------------
     # 2. Run Arpeggio (with size filter)
     # ------------------------------------------------------------------
-    arpeggio_stem = clean_cif_path.name.split(".")[0]
-    json_path = json_out_dir / f"{arpeggio_stem}.json"
+    arpeggio_stem = os.path.splitext(os.path.basename(clean_cif_path))[0]
+    json_path = os.path.join(jsons_dir, f"{arpeggio_stem}.json")
 
-    if json_path.exists():
+    if os.path.exists(json_path):
         result_info['skipped_existing'] = True
         result_info['elapsed'] = time.time() - start_time
         return result_info
@@ -115,7 +112,7 @@ def process_structure(cif_file, acr_type, structure_name, clean_cif_dir, jsons_d
 
     try:
         subprocess.run(
-            ["pdbe-arpeggio", str(clean_cif_path), "-sa", "-co", "1.0", "-o", str(json_out_dir)],
+            ["pdbe-arpeggio", clean_cif_path, "-sa", "-co", "1.0", "-o", jsons_dir],
             check=True,
             timeout=ARPEGGIO_TIMEOUT,
             capture_output=True,
@@ -145,7 +142,7 @@ def write_log_entry(log_file_handle, result):
         status = "EXISTED"
 
     line = (
-        f"[{status:<7}] {result['acr_type']}/{result['structure']}"
+        f"[{status:<7}] {result['structure']}"
         f"  ({result['elapsed']:.1f}s)"
     )
     if result.get('step_failed'):
@@ -157,25 +154,22 @@ def write_log_entry(log_file_handle, result):
     log_file_handle.flush()
 
 
-def run_single(cif_path, clean_cif_dir, jsons_dir, acr_type='unknown'):
+def run_single(cif_path, clean_cif_script, clean_cif_dir, jsons_dir):
     """
     Run the pipeline for a single CIF file.
-    Used for validation and testing (--single flag).
-    acr_type is provided via --acr-type (defaults to 'unknown').
+    Used for validation and testing.
     """
-    cif_file       = Path(cif_path)
-    structure_name = cif_file.stem
+    structure_name = os.path.splitext(os.path.basename(cif_path))[0]
 
     print(f"Single-file mode")
-    print(f"  Input CIF:      {cif_file}")
-    print(f"  ACR type:       {acr_type}")
+    print(f"  Input CIF:      {cif_path}")
     print(f"  Structure name: {structure_name}")
     print(f"  Clean CIF dir:  {clean_cif_dir}")
     print(f"  JSONs dir:      {jsons_dir}\n")
 
     result = process_structure(
-        cif_file, acr_type, structure_name,
-        clean_cif_dir, jsons_dir
+        cif_path, structure_name,
+        clean_cif_script, clean_cif_dir, jsons_dir
     )
 
     status = "EXISTED" if result.get('skipped_existing') else result['status'].upper()
@@ -185,59 +179,56 @@ def run_single(cif_path, clean_cif_dir, jsons_dir, acr_type='unknown'):
     if result.get('error'):
         print(f"  Error: {result['error']}")
     if result['status'] == 'success' and not result.get('skipped_existing'):
-        print(f"  Cleaned CIF: {clean_cif_dir / acr_type / f'{structure_name}_clean.cif'}")
-        print(f"  JSON output: {jsons_dir / acr_type / f'{structure_name}_clean.json'}")
+        print(f"  Cleaned CIF: {os.path.join(clean_cif_dir, structure_name + '_clean.cif')}")
+        print(f"  JSON output: {os.path.join(jsons_dir, structure_name + '_clean.json')}")
 
     return result
 
 
 if __name__ == "__main__":
 
-    # ------------------------------------------------------------------
-    # ARGUMENT PARSING
-    # Supports both single-file (--single) and full batch mode
-    # ------------------------------------------------------------------
-    arg_parser = argparse.ArgumentParser(
-        description="Arpeggio pipeline v4: CIF-native clean -> arpeggio"
-    )
-    arg_parser.add_argument(
-        '--single', type=str, default=None, metavar='CIF_PATH',
-        help='Run on a single CIF file (for testing/validation). '
-             'Provide full path to the .cif file.'
-    )
-    arg_parser.add_argument(
-        '--acr-type', type=str, default='unknown', metavar='ACR_TYPE',
-        help='ACR type label for output subdirectory in single-file mode '
-             '(e.g. AcrIF1). Defaults to "unknown".'
-    )
-    args = arg_parser.parse_args()
+    # ==================================================================
+    # EDIT THESE VARIABLES TO CONFIGURE YOUR RUN
+    # ==================================================================
 
-    ## Output directories (shared by both modes)
-    clean_cif_dir = Path("/home/epi2melabs/AcrNetworks-clean-v2/6_arpeggio_troubleshoot/arp_results/CIFs_cleaned")
-    jsons_dir     = Path("/home/epi2melabs/AcrNetworks-clean-v2/6_arpeggio_troubleshoot/arp_results/JSONs")
-    log_dir       = Path("/home/epi2melabs/AcrNetworks-clean-v2/6_arpeggio_troubleshoot/arp_results/logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
+    # Path to the clean_cif script
+    clean_cif_script = "/home/epi2melabs/AcrNetworks-clean-v2/6_arpeggio_troubleshoot/clean_cif_ver2.py"
+
+    # Input directory containing CIF files
+    input_dir = "/home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/sorted_enzymes_CIFs/enzymes_CIF_unflagged"
+
+    # Output directories
+    clean_cif_dir = "/home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/sorted_enzymes_CIFs/enzymes_CIF_unflagged/CIFs_cleaned"
+    jsons_dir     = "/home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/sorted_enzymes_CIFs/enzymes_CIF_unflagged/JSONs"
+    log_dir       = "/home/epi2melabs/AcrNetworks-clean-v2/3_data/enzymes/sorted_enzymes_CIFs/enzymes_CIF_unflagged/logs"
+
+    # Single-file mode: set to a CIF file path to run one file, or None for batch
+    single_file = None  # e.g. "/path/to/your/file.cif"
+
+    # ==================================================================
+
+    os.makedirs(log_dir, exist_ok=True)
 
     # ------------------------------------------------------------------
     # SINGLE FILE MODE
     # ------------------------------------------------------------------
-    if args.single:
-        run_single(args.single, clean_cif_dir, jsons_dir, acr_type=args.acr_type)
+    if single_file:
+        run_single(single_file, clean_cif_script, clean_cif_dir, jsons_dir)
         exit(0)
 
     # ------------------------------------------------------------------
     # BATCH MODE
     # ------------------------------------------------------------------
-    cif_files = get_all_cif_files(DATA_DIR)
+    cif_files = get_all_cif_files(input_dir)
     cif_files = sorted(cif_files, key=lambda x: os.path.getsize(x[0]))
-    print(f"Found {len(cif_files)} CIF files across all Acr types")
+    print(f"Found {len(cif_files)} CIF files")
 
     ## mini test - uncomment to test with a small batch
     # cif_files = cif_files[:5]
-    # print(f"test: run on {len(cif_files)} files: {[s for _, _, s in cif_files]}")
+    # print(f"test: run on {len(cif_files)} files: {[s for _, s in cif_files]}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file  = log_dir / f"arpeggio_run_{timestamp}.log"
+    log_file  = os.path.join(log_dir, f"arpeggio_run_{timestamp}.log")
 
     with open(log_file, "w") as log_fh:
         log_fh.write(f"Arpeggio pipeline run: {datetime.now()}\n")
@@ -255,10 +246,10 @@ if __name__ == "__main__":
             future_to_file = {
                 executor.submit(
                     process_structure,
-                    cif_file, acr_type, structure_name,
-                    clean_cif_dir, jsons_dir
+                    cif_file, structure_name,
+                    clean_cif_script, clean_cif_dir, jsons_dir
                 ): structure_name
-                for cif_file, acr_type, structure_name in cif_files
+                for cif_file, structure_name in cif_files
             }
 
             for future in concurrent.futures.as_completed(future_to_file):
@@ -279,7 +270,7 @@ if __name__ == "__main__":
                     else:
                         tag = "SKIP"
 
-                    print(f"  {progress} [{tag:<7}] {result['acr_type']}/{result['structure']} "
+                    print(f"  {progress} [{tag:<7}] {result['structure']} "
                           f"({result['elapsed']:.1f}s) {result.get('step_failed') or ''}")
 
                     write_log_entry(log_fh, result)
@@ -287,7 +278,7 @@ if __name__ == "__main__":
                 except Exception as exc:
                     print(f"  {progress} [ERR    ] {name} raised exception: {exc}")
                     err_result = {
-                        'acr_type': '?', 'structure': name,
+                        'structure': name,
                         'status': 'failed', 'step_failed': 'EXECUTOR',
                         'error': str(exc), 'elapsed': 0
                     }
