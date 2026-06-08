@@ -15,3 +15,6 @@ logs/
 5_PDB_info_exploration/
 8_experiments/
 tmp_mmseqs_search/
+input_data/
+logs/
+tmp_mmseqs/
