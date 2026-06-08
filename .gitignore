@@ -8,3 +8,10 @@ Old Code/
 tmp_mmseqs/
 input_data/
 6_arpeggio_troubleshoot/arpeggio_comparison
+logs/
+9_troubleshooting/
+0_1_data/
+1_figure_creation/
+5_PDB_info_exploration/
+8_experiments/
+tmp_mmseqs_search/

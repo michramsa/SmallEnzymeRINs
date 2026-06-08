@@ -45,6 +45,10 @@ PROTEIN_DIR = BASE_DIR / "6_Acr_protein_analysis"
 PDB_EXPLORE_DIR = BASE_DIR / "5_PDB_info_exploration"
 ENZYMES_DIR = DATA_DIR / "enzymes"
 UF_ENZYMES_DIR = DATA_DIR / "enzymes" / "sorted_enzymes_CIFs" / "enzymes_CIF_unflagged"
+STANDARD_DIR = BASE_DIR / "8_standardization"
+
+# 5/19/26 Cleanup
+DATA_DIR_2 = BASE_DIR / "0_1_data"
 
 # deprecated from old version
 # AMITAI_DIR = BASE_DIR / "Amitai"

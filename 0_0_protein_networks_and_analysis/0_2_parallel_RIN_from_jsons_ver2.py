@@ -33,20 +33,41 @@ def setup_logger(out_dir: Path) -> logging.Logger:
     logger.addHandler(ch)
     return logger
 
+STANDARD_AA = {
+    "ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU", "GLY",
+    "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER",
+    "THR", "TRP", "TYR", "VAL"
+}
+
 def arpeggio_to_rin(json_file):
-    """Convert a single Arpeggio JSON to a NetworkX residue interaction graph."""
+    """Convert a single Arpeggio JSON to a NetworkX residue interaction graph.
+    
+    Only protein-protein interactions between the 20 standard amino acids are
+    included. Waters, ligands, ions, and cofactors are excluded so that
+    centrality measures reflect the protein interaction network only,
+    consistent with Amitai et al. (2004).
+    """
     with open(json_file, 'r') as f:
         interactions = json.load(f)
 
     rin = nx.Graph()
     residue_interactions = {}
+    n_total    = 0
+    n_filtered = 0
 
     for interaction in interactions:
         bgn = interaction['bgn']
         end = interaction['end']
+        n_total += 1
 
         # ignore waters
         if bgn['label_comp_id'] == 'HOH' or end['label_comp_id'] == 'HOH':
+            n_filtered += 1
+            continue
+
+        # ignore non-standard residues (ligands, ions, cofactors, modified AAs)
+        if bgn['label_comp_id'] not in STANDARD_AA or end['label_comp_id'] not in STANDARD_AA:
+            n_filtered += 1
             continue
 
         # ignore interactions with the same residue (self loop)    
@@ -101,7 +122,7 @@ def arpeggio_to_rin(json_file):
             end_res=idet['end_res'],
         )
 
-    return rin
+    return rin, n_total, n_filtered
 
 def process_single_json(json_file, out_dir):
     """
@@ -116,14 +137,14 @@ def process_single_json(json_file, out_dir):
     tmp_path = Path(out_dir) / f"{stem}.graphml.tmp"
 
     try:
-        rin = arpeggio_to_rin(json_file)
+        rin, n_total, n_filtered = arpeggio_to_rin(json_file)
         nx.write_graphml(rin, tmp_path)
         tmp_path.rename(out_path)   # atomic on most local filesystems
-        return stem, len(rin.nodes())
+        return stem, len(rin.nodes()), n_total, n_filtered
     except Exception as exc:
         if tmp_path.exists():
             tmp_path.unlink()
-        return stem, f"Error: {exc}"
+        return stem, f"Error: {exc}", 0, 0
 
 def parallel_jsons_to_rins(json_dir, out_dir, num_processes=None):
     """
@@ -188,11 +209,15 @@ def parallel_jsons_to_rins(json_dir, out_dir, num_processes=None):
                 desc="Building RINs",
             ):
                 results.append(result)
-                stem, outcome = result
+                stem, outcome, n_total, n_filtered = result
                 if str(outcome).startswith("Error"):
                     logger.warning(f"FAILED  {stem}: {outcome}")
                 else:
-                    logger.debug(f"OK      {stem} ({outcome} nodes)")
+                    pct = (n_filtered / n_total * 100) if n_total > 0 else 0
+                    logger.debug(
+                        f"OK      {stem} ({outcome} nodes | "
+                        f"{n_filtered}/{n_total} interactions filtered [{pct:.1f}%])"
+                    )
 
     except KeyboardInterrupt:
         logger.warning("KeyboardInterrupt — shutting down worker pool")
@@ -210,7 +235,7 @@ def parallel_jsons_to_rins(json_dir, out_dir, num_processes=None):
     logger.info(f"Session complete — {len(successes)}/{len(to_process)} succeeded")
     if errors:
         logger.warning(f"{len(errors)} error(s) this session:")
-        for stem, msg in errors:
+        for stem, msg, _, __ in errors:
             logger.warning(f"  {stem}: {msg}")
 
     logger.info("RIN BUILD SESSION DONE")
@@ -221,7 +246,7 @@ def tester():
     test_file = "/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot/1CWX_clean.json"
     stem     = Path(test_file).stem
     out_dir = Path("/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot")
-    rin_file = arpeggio_to_rin(test_file)
+    rin_file, n_total, n_filtered = arpeggio_to_rin(test_file)
     tmp_path = Path(out_dir) / f"{stem}.graphml.tmp"
     nx.write_graphml(rin_file, tmp_path)
 
@@ -229,14 +254,47 @@ def tester():
     test_file = "/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot/6AVD_clean.json"
     stem     = Path(test_file).stem
     out_dir = Path("/home/epi2melabs/AcrNetworks-clean-v2/7_RIG_creation_troubleshoot")
-    rin_file = arpeggio_to_rin(test_file)
+    rin_file, n_total, n_filtered = arpeggio_to_rin(test_file)
     tmp_path = Path(out_dir) / f"new_{stem}.graphml"
     nx.write_graphml(rin_file, tmp_path)
 
+def validate_rins(rin_dir):
+    """
+    Check all GraphML files in rin_dir to confirm every node is one of the
+    20 standard amino acids. Prints a summary and returns a dict of any
+    offending files and their non-standard residues for further inspection.
+    """
+    rin_dir     = Path(rin_dir)
+    graphmls    = sorted(rin_dir.glob("*.graphml"))
+    offenders   = {}
+
+    print(f"Validating {len(graphmls)} GraphML files in {rin_dir}...")
+
+    for gml in graphmls:
+        graph = nx.read_graphml(gml)
+        non_standard = set()
+        for node, attrs in graph.nodes(data=True):
+            res = attrs.get("residue_type", "")
+            if res not in STANDARD_AA:
+                non_standard.add(res)
+        if non_standard:
+            offenders[gml.name] = non_standard
+
+    if offenders:
+        print(f"\nFound {len(offenders)} file(s) with non-standard residues:")
+        for fname, residues in sorted(offenders.items()):
+            print(f"  {fname}: {sorted(residues)}")
+    else:
+        print("All GraphML files contain only standard amino acids.")
+
+    return offenders
+
 def main():
     # Edit these two paths
-    json_dir = UF_ENZYMES_DIR / "JSONs"  # folder of .json files
-    out_dir  = UF_ENZYMES_DIR / "RINs"            # GraphML files go here
+
+    # 5/19
+    json_dir = DATA_DIR_2 / "enzymes_CIF_unflagged" / "JSONs"  # folder of .json files
+    out_dir  = DATA_DIR_2 / "RINs"   # GraphML files go here
 
     num_processes = 4   # set to None to use all available CPUs
 
@@ -244,7 +302,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-
     # 5/5/2026
     # tester()
+
+    # 5/19/2026 - revise for ligands
+    main()
+    ### should be clean
+    validate_rins(DATA_DIR_2 / "RINs")
+    ### should have issues
+    validate_rins(UF_ENZYMES_DIR / "RINs")
