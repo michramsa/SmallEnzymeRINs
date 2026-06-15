@@ -403,6 +403,246 @@ def append_betweenness_to_centrality(graphml_dir, centrality_dir):
         f"missing CSV: {n_missing}, errors: {n_errors}"
     )
 
+
+# ---------------------------------------------------------------------------
+# RCA helpers — del Sol et al. (2006), Mol. Syst. Biol.
+# ---------------------------------------------------------------------------
+def _characteristic_path_length(g, method="lcc"):
+    """
+    Compute the characteristic path length (CPL) of a graph.
+
+    Parameters
+    ----------
+    g      : NetworkX graph (may be disconnected after node removal)
+    method : "lcc"      -> CPL of the largest connected component only.
+             "harmonic" -> Harmonic-mean CPL; unreachable pairs contribute 0
+                          instead of being excluded. Recommended for sparse
+                          non-covalent interaction graphs.
+
+    Returns
+    -------
+    CPL as a float. Returns 0.0 when fewer than 2 nodes remain.
+    """
+    if g.number_of_nodes() < 2:
+        return 0.0
+
+    if method == "harmonic":
+        n       = g.number_of_nodes()
+        n_pairs = n * (n - 1) / 2
+        if n_pairs == 0:
+            return 0.0
+        total = 0.0
+        for source in g.nodes():
+            lengths = nx.single_source_shortest_path_length(g, source)
+            for target, d in lengths.items():
+                if target != source and d > 0:
+                    total += 1.0 / d
+        return total / (2 * n_pairs)
+
+    else:  # method == "lcc"
+        if not nx.is_connected(g):
+            lcc_nodes = max(nx.connected_components(g), key=len)
+            g = g.subgraph(lcc_nodes).copy()
+            if g.number_of_nodes() < 2:
+                return 0.0
+        return nx.average_shortest_path_length(g)
+
+
+def _compute_rca(graph, cpl_method="lcc"):
+    """
+    Compute Residue Centrality Analysis (RCA) and its z-scores.
+
+    For each node k:
+        delta_L_k = |L - L_rem_k|
+    where L is the CPL of the full graph and L_rem_k is the CPL after
+    removing node k and all its edges.
+
+    Z-score (del Sol et al. 2006, Eq. 2):
+        z_k = (delta_L_k - mean(delta_L)) / std(delta_L)
+
+    Residues with z_k >= 2.0 are classified as CICD residues.
+
+    Parameters
+    ----------
+    graph      : NetworkX graph representing the protein RIN
+    cpl_method : "lcc" or "harmonic" -- passed to _characteristic_path_length
+
+    Returns
+    -------
+    (delta_L_dict, zscore_dict) -- both keyed by node ID
+    """
+    L = _characteristic_path_length(graph, method=cpl_method)
+
+    delta_L = {}
+    for node in graph.nodes():
+        g_removed     = graph.copy()
+        g_removed.remove_node(node)
+        L_rem         = _characteristic_path_length(g_removed, method=cpl_method)
+        delta_L[node] = abs(L - L_rem)
+
+    values  = numpy.array(list(delta_L.values()))
+    mean_dL = numpy.mean(values)
+    std_dL  = numpy.std(values, ddof=0)   # population std, matching del Sol
+
+    if std_dL == 0:
+        zscore_dict = {node: 0.0 for node in delta_L}
+    else:
+        zscore_dict = {
+            node: float((delta_L[node] - mean_dL) / std_dL)
+            for node in delta_L
+        }
+
+    return delta_L, zscore_dict
+
+
+def _worker_rca(args: tuple) -> tuple[str, str]:
+    """
+    Top-level worker for parallel RCA computation -- must be a module-level
+    function so multiprocessing can pickle it.
+
+    args: (graphml_path_str, csv_path_str, cpl_method_str, overwrite_bool)
+
+    Returns
+    -------
+    (base_name, outcome_str) where outcome_str is one of:
+        "skipped"        -- RCA_deltaL column already present and overwrite=False
+        "ok"             -- columns appended/overwritten successfully
+        "no_csv"         -- no _centrality.csv found for this protein
+        "Error: <msg>"   -- exception during computation or CSV write
+    """
+    graphml_path_str, csv_path_str, cpl_method, overwrite = args
+    graphml_path = Path(graphml_path_str)
+    csv_path     = Path(csv_path_str)
+    base_name    = graphml_path.stem.split("_")[0]
+
+    if not csv_path.exists():
+        return base_name, "no_csv"
+
+    try:
+        df = pd.read_csv(csv_path)
+
+        if "RCA_deltaL" in df.columns and not overwrite:
+            return base_name, "skipped"
+
+        graph = nx.read_graphml(graphml_path)
+        delta_L_dict, zscore_dict = _compute_rca(graph, cpl_method=cpl_method)
+
+        df["RCA_deltaL"] = df["Node"].astype(str).map(delta_L_dict)
+        df["RCA_zscore"] = df["Node"].astype(str).map(zscore_dict)
+        df["IsCICD"]     = df["RCA_zscore"] >= 2.0
+
+        df.to_csv(csv_path, index=False)
+        return base_name, "ok"
+
+    except Exception as exc:
+        return base_name, f"Error: {exc}"
+
+def _run_parallel_rca(work_args, num_processes, dataset_label):
+    """
+    Parallel runner for RCA append tasks. Each item in work_args is a tuple:
+        (graphml_path_str, csv_path_str, cpl_method_str)
+
+    Prints per-protein outcomes and a final summary. Handles KeyboardInterrupt
+    gracefully. Each worker writes the full CSV in one call so partial writes
+    are not an issue.
+    """
+    if not work_args:
+        print(f"[{dataset_label}] Nothing to process.")
+        return
+
+    print(f"[{dataset_label}] Submitting {len(work_args)} proteins to "
+          f"{num_processes} worker(s).")
+
+    n_ok = n_skipped = n_no_csv = n_errors = 0
+    results = []
+
+    try:
+        with mp.Pool(processes=num_processes) as pool:
+            for base_name, outcome in tqdm(
+                pool.imap_unordered(_worker_rca, work_args),
+                total=len(work_args),
+                desc=dataset_label,
+            ):
+                results.append((base_name, outcome))
+                if outcome == "ok":
+                    n_ok += 1
+                elif outcome == "skipped":
+                    n_skipped += 1
+                elif outcome == "no_csv":
+                    print(f"  NO CSV   {base_name}")
+                    n_no_csv += 1
+                elif outcome.startswith("Error"):
+                    print(f"  FAILED   {base_name}: {outcome}")
+                    n_errors += 1
+
+    except KeyboardInterrupt:
+        print(f"\n[{dataset_label}] KeyboardInterrupt -- pool shut down. "
+              f"Completed {len(results)} protein(s) this session. Re-run to resume.")
+        return
+
+    print(
+        f"\n[{dataset_label}] append_rca_to_centrality complete -- "
+        f"updated: {n_ok}, skipped: {n_skipped}, "
+        f"no CSV: {n_no_csv}, errors: {n_errors}"
+    )
+
+def append_rca_to_centrality(
+    graphml_dir,
+    centrality_dir,
+    cpl_method="lcc",
+    num_processes=4,
+    overwrite=False,
+):
+    """
+    Appends RCA_deltaL, RCA_zscore, and IsCICD columns to each existing
+    _centrality.csv using the corresponding GraphML file in graphml_dir.
+
+    RCA (Residue Centrality Analysis) is computed per del Sol et al. (2006):
+        delta_L_k = |L - L_rem_k|
+    where L is the characteristic path length of the full graph and L_rem_k
+    is the CPL after removing node k and all its edges. Z-scores are computed
+    over all residues in each protein; residues with z >= 2.0 are flagged as
+    CICD (Centrally Interconnected Conserved Determinant) residues.
+
+    Runs in parallel across proteins. By default skips any CSV that already
+    has an RCA_deltaL column -- set overwrite=True to recompute all proteins
+    (e.g. when switching between cpl_method="lcc" and cpl_method="harmonic").
+
+    Parameters
+    ----------
+    graphml_dir    : path-like   Directory containing *.graphml files.
+    centrality_dir : path-like   Directory containing *_centrality.csv files.
+    cpl_method     : "lcc" (default) or "harmonic". Controls how disconnected
+                     graphs are handled after node removal. "lcc" uses only
+                     the largest connected component; "harmonic" uses the
+                     harmonic mean (unreachable pairs contribute 0).
+    num_processes  : Number of parallel worker processes (default 4).
+    overwrite      : If True, recomputes and overwrites RCA columns even if
+                     they already exist. Use when switching cpl_method.
+                     Default False.
+    """
+    graphml_dir    = Path(graphml_dir)
+    centrality_dir = Path(centrality_dir)
+
+    if not centrality_dir.exists():
+        print(f"Centrality directory {centrality_dir} does not exist.")
+        return
+
+    graphml_files = sorted(graphml_dir.glob("*.graphml"))
+    if not graphml_files:
+        print(f"No GraphML files found in {graphml_dir}.")
+        return
+
+    # Build one work-item per graphml; overwrite flag passed through to worker.
+    work_args = []
+    for graphml_file in graphml_files:
+        base_name = graphml_file.stem.split("_")[0]
+        csv_path  = centrality_dir / f"{base_name}_centrality.csv"
+        work_args.append((str(graphml_file), str(csv_path), cpl_method, overwrite))
+
+    dataset_label = centrality_dir.parent.name
+    _run_parallel_rca(work_args, num_processes, dataset_label)
+
 # ---------------------------------------------------------------------------
 # FASTA helper
 # ---------------------------------------------------------------------------
@@ -575,15 +815,32 @@ def main():
 
 
 if __name__ == "__main__":
+    num_processes = 4
     # main()
+    # append_betweenness_to_centrality(
+    #     graphml_dir    = DATA_DIR_2 / "RINs",
+    #     centrality_dir = DATA_DIR_2 / "Centralities",
+    # )
+    # # For the PISCES reference set, call it again with the PISCES paths:
+    # append_betweenness_to_centrality(
+    #     graphml_dir    = DATA_DIR_2 / "RINs",
+    #     centrality_dir = DATA_DIR_2 / "old_PISCES" / "Centralities",
+    # )
 
-    append_betweenness_to_centrality(
+    # 6/8/2026
+
+    append_rca_to_centrality(
         graphml_dir    = DATA_DIR_2 / "RINs",
         centrality_dir = DATA_DIR_2 / "Centralities",
+        cpl_method     = "harmonic",
+        num_processes  = num_processes,
+        overwrite      = True,
     )
 
-    # For the PISCES reference set, call it again with the PISCES paths:
-    append_betweenness_to_centrality(
+    append_rca_to_centrality(
         graphml_dir    = DATA_DIR_2 / "RINs",
         centrality_dir = DATA_DIR_2 / "old_PISCES" / "Centralities",
+        cpl_method     = "harmonic",
+        num_processes  = num_processes,
+        overwrite      = True,
     )

@@ -101,6 +101,7 @@ COLORS = {
     "red":        "#E15759",
     "yellow":     "#EDC948",
     "brown":      "#9C755F",
+    "yellow_sat": "#F5C800",
 
     # Neutrals
     "dark_gray":  "#2C2C2C",

@@ -251,26 +251,26 @@ def assign_rsa_category(df: pd.DataFrame) -> pd.DataFrame:
 # ── plotting ──────────────────────────────────────────────────────────────────
 
 RSA_COLORS = {
-    "exposed": "#E8781A",   # orange  (Amitai)
-    "core":    "#2E8B2E",   # green   (Amitai)
-    "other":   "#4472C4",   # blue    (Amitai)
+    "exposed": "#35302B",   
+    "core":    "#E8E4DF",   
+    "other":   "#8E8278",   
     "unknown": "#888888",
 }
 
 RSA_ORDER = ["other", "core", "exposed", "unknown"]   # draw exposed on top
 
 RSA_LABELS = {
-    "exposed": "Highly exposed (RSA > 0.5)",
+    "exposed": "Exposed (RSA > 0.5)",
     "core":    "Core (RSA = 0)",
-    "other":   "Other (0 < RSA ≤ 0.5)",
+    "other":   "Partial Exposed (0 < RSA ≤ 0.5)",
     "unknown": "RSA not available",
 }
 
 OVERLAY_COLORS = {
-    "exposed": "#D65F00",   # orange     — COLORS["orange"]
-    "core":    "#4878CF",   # blue       — COLORS["blue"]
-    "other":   "#76B7B2",   # teal       — COLORS["teal"]
-    "unknown": "#8D8D8D",   # mid_gray   — COLORS["mid_gray"]
+    "exposed": "#35302B",   
+    "core":    "#E8E4DF",   
+    "other":   "#8E8278",
+    "unknown": "#8D8D8D",   
 }
 
 AXIS_LIM = (-4, 4)
@@ -421,7 +421,7 @@ def mark_functional_residues(test_df: pd.DataFrame,
     return test_df
 
 
-def _scatter_by_rsa(ax, df, color_map, alpha=0.4, s=6, zorder=2, edgecolors="none"):
+def _scatter_by_rsa(ax, df, color_map, alpha=0.4, s=6, zorder=2, edgecolors="white"):
     for cat in RSA_ORDER:
         sub = df[df["RSA_category"] == cat]
         if sub.empty:
@@ -466,6 +466,7 @@ def _format_axes_no_title_2(ax,
 
 
 def plot_reference_only(ref_df: pd.DataFrame, output_path: Path):
+    apply_style()    
     fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
     _scatter_by_rsa(ax, ref_df, RSA_COLORS, alpha=0.35, s=5)
 
@@ -489,6 +490,7 @@ def plot_reference_only(ref_df: pd.DataFrame, output_path: Path):
 
 
 def plot_test_only(test_df: pd.DataFrame, output_path: Path):
+    apply_style()
     fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
     _scatter_by_rsa(ax, test_df, OVERLAY_COLORS, alpha=0.70, s=18, zorder=2,
                     edgecolors="white")
@@ -531,15 +533,14 @@ def plot_test_only_functional(test_df: pd.DataFrame, output_path: Path):
             "'is_functional' column not found. "
             "Run mark_functional_residues() before calling this function."
         )
-
+    apply_style()
     fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
-
     # non-functional residues — light grey background
     non_func = test_df[~test_df["is_functional"]]
     ax.scatter(
         non_func["StdCloseness"], non_func["StdDegree"],
         c="#CCCCCC", alpha=0.5, s=12, zorder=2,
-        edgecolors="none", label=f"Non-functional (n={len(non_func):,})",
+        edgecolors="white", label=f"Non-functional (n={len(non_func):,})",
     )
 
     # functional residues — black on top
@@ -568,8 +569,8 @@ def plot_test_only_functional(test_df: pd.DataFrame, output_path: Path):
 
 
 def plot_overlay(ref_df: pd.DataFrame, test_df: pd.DataFrame, output_path: Path):
+    apply_style()
     fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
-
     # reference set — muted background
     _scatter_by_rsa(ax, ref_df,  RSA_COLORS,    alpha=0.20, s=4,  zorder=2)
     # test set — prominent foreground
@@ -608,7 +609,7 @@ def plot_overlay(ref_df: pd.DataFrame, test_df: pd.DataFrame, output_path: Path)
 
 def _scatter_by_rsa_betweenness_vs_closeness(ax, df, color_map,
                                               alpha=0.4, s=6,
-                                              zorder=2, edgecolors="none"):
+                                              zorder=2, edgecolors="white"):
     """
     Scatter helper: StdCloseness (x) vs. StdBetweenness (y), colored by RSA category.
     Mirrors _scatter_by_rsa() but uses StdBetweenness on the y-axis.
@@ -626,7 +627,7 @@ def _scatter_by_rsa_betweenness_vs_closeness(ax, df, color_map,
  
 def _scatter_by_rsa_betweenness_vs_degree(ax, df, color_map,
                                            alpha=0.4, s=6,
-                                           zorder=2, edgecolors="none"):
+                                           zorder=2, edgecolors="white"):
     """
     Scatter helper: StdDegree (x) vs. StdBetweenness (y), colored by RSA category.
     Mirrors _scatter_by_rsa() but uses StdDegree on x and StdBetweenness on y.
@@ -1644,17 +1645,17 @@ if __name__ == "__main__":
     # plot_rsa_boxplot_functional_categories(test_df, ver_dir / "fig_rsa_boxplot_functional_categories.tiff")
 
     ### 6/4/26 add betweenness centrality
-    # main_size_controlled(
-    #     ref_centrality_dir   = DATA_DIR_2 / "old_PISCES" / "Centralities",
-    #     ref_sasa_dir         = DATA_DIR_2 / "old_PISCES" / "SASAs",
-    #     test_centrality_dir  = DATA_DIR_2 / "Centralities",
-    #     test_sasa_dir        = DATA_DIR_2 / "SASAs",
-    #     output_dir           = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7",
-    #     max_chain_length     = 200,
-    #     biolip_csv           = DATA_DIR_2 / "biolip_functional_residues.csv",
-    #     exclude_test_pdb_ids = {'7ara', '4q95'}, ### these two IDs have issues
-    #     fasta_path           = DATA_DIR_2 / "biolip_filtered.fasta"
-    # )
+    main_size_controlled(
+        ref_centrality_dir   = DATA_DIR_2 / "old_PISCES" / "Centralities",
+        ref_sasa_dir         = DATA_DIR_2 / "old_PISCES" / "SASAs",
+        test_centrality_dir  = DATA_DIR_2 / "Centralities",
+        test_sasa_dir        = DATA_DIR_2 / "SASAs",
+        output_dir           = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7",
+        max_chain_length     = 200,
+        biolip_csv           = DATA_DIR_2 / "biolip_functional_residues.csv",
+        exclude_test_pdb_ids = {'7ara', '4q95'}, ### these two IDs have issues
+        fasta_path           = DATA_DIR_2 / "biolip_filtered.fasta"
+    )
 
     ver_dir = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7"
 

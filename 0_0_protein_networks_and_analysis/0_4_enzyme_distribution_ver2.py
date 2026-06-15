@@ -186,7 +186,7 @@ def plot_ec_distribution(
 
 if __name__ == "__main__":
 
-    FIGURES_DIR = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.6"
+    FIGURES_DIR = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7"
 
     # Shared input CSV containing priority EC assignments for all enzymes
     RESOLVED_PRIO_EC_CSV = DATA_DIR_2 / "resolved_prio_ec.csv"
@@ -252,7 +252,7 @@ if __name__ == "__main__":
 
 
     ## updated 6/1/26
-    TEST_STANDARDIZED_CSV = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.6" / "test_standardized.csv"
+    TEST_STANDARDIZED_CSV = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7" / "test_standardized.csv"
 
     # Collect the unique PDB IDs present in the test set (uppercase for matching)
     df_test_std = pd.read_csv(TEST_STANDARDIZED_CSV, usecols=["pdb_id"])
