@@ -290,7 +290,65 @@ def worker_pisces(args):
     sasa_result = _compute_sasa_pdb(base_name, pdb_dir, sasa_dir)
     return base_name, cent_result, sasa_result
 
+def worker_centrality_only(args):
+    """
+    Worker for new RIN sets where SASA is already computed.
+    args: (graphml_path_str, centrality_dir_str)
+    Returns (base_name, cent_result, "sasa_skipped") — 3-tuple to stay
+    compatible with run_parallel's logging expectations.
+    """
+    graphml_path, centrality_dir = args
+    graphml_path = Path(graphml_path)
+    base_name    = graphml_path.stem.split("_")[0]
 
+    try:
+        graph = nx.read_graphml(graphml_path)
+    except Exception as exc:
+        return base_name, f"Error loading graph: {exc}", "sasa_skipped"
+
+    cent_result = _compute_centrality(graph, base_name, centrality_dir)
+    return base_name, cent_result, "sasa_skipped"
+
+
+def run_parallel_centrality_only(work_args, logger, num_processes, dataset_label):
+    """
+    Parallel runner for centrality-only tasks (no SASA).
+    Reuses run_parallel's signature pattern but calls worker_centrality_only.
+    """
+    if not work_args:
+        logger.info(f"[{dataset_label}] Nothing to process.")
+        return
+
+    logger.info(f"[{dataset_label}] Submitting {len(work_args)} proteins to "
+                f"{num_processes} worker(s).")
+
+    results = []
+    try:
+        with mp.Pool(processes=num_processes) as pool:
+            for result in tqdm(
+                pool.imap_unordered(worker_centrality_only, work_args),
+                total=len(work_args),
+                desc=dataset_label,
+            ):
+                results.append(result)
+                base_name, cent, _ = result
+                if str(cent).startswith("Error"):
+                    logger.warning(f"FAILED centrality  {base_name}: {cent}")
+                else:
+                    logger.debug(f"OK centrality  {base_name}: {cent}")
+
+    except KeyboardInterrupt:
+        logger.warning(f"[{dataset_label}] KeyboardInterrupt — pool shut down. "
+                       f"Completed {len(results)} protein(s) this session. Re-run to resume.")
+        return
+
+    errors = [(b, c) for b, c, _ in results if str(c).startswith("Error")]
+    logger.info(f"[{dataset_label}] Done — {len(results) - len(errors)}/{len(results)} "
+                f"fully successful.")
+    if errors:
+        logger.warning(f"[{dataset_label}] {len(errors)} protein(s) with errors:")
+        for b, c in errors:
+            logger.warning(f"  {b}  centrality={c}")
 # ---------------------------------------------------------------------------
 # Sequential post-processing
 # ---------------------------------------------------------------------------
@@ -659,10 +717,6 @@ def parse_rep_seq_fasta(fasta_path):
                 rep_ids.add(line[1:5].upper())
     return rep_ids
 
-
-# ---------------------------------------------------------------------------
-# Parallel runner
-# ---------------------------------------------------------------------------
 def run_parallel(work_args, worker_fn, logger, num_processes, dataset_label):
     """
     Runs worker_fn over work_args using a Pool, with tqdm progress and clean
@@ -711,10 +765,6 @@ def run_parallel(work_args, worker_fn, logger, num_processes, dataset_label):
         for b, c, s in errors:
             logger.warning(f"  {b}  centrality={c}  sasa={s}")
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     # ---- configurable parameters ----
     num_processes = 4   # number of parallel worker processes
@@ -829,18 +879,94 @@ if __name__ == "__main__":
 
     # 6/8/2026
 
-    append_rca_to_centrality(
-        graphml_dir    = DATA_DIR_2 / "RINs",
-        centrality_dir = DATA_DIR_2 / "Centralities",
-        cpl_method     = "harmonic",
-        num_processes  = num_processes,
-        overwrite      = True,
-    )
+    # append_rca_to_centrality(
+    #     graphml_dir    = DATA_DIR_2 / "RINs",
+    #     centrality_dir = DATA_DIR_2 / "Centralities",
+    #     cpl_method     = "harmonic",
+    #     num_processes  = num_processes,
+    #     overwrite      = True,
+    # )
 
-    append_rca_to_centrality(
-        graphml_dir    = DATA_DIR_2 / "RINs",
-        centrality_dir = DATA_DIR_2 / "old_PISCES" / "Centralities",
-        cpl_method     = "harmonic",
-        num_processes  = num_processes,
-        overwrite      = True,
-    )
+    # append_rca_to_centrality(
+    #     graphml_dir    = DATA_DIR_2 / "RINs",
+    #     centrality_dir = DATA_DIR_2 / "old_PISCES" / "Centralities",
+    #     cpl_method     = "harmonic",
+    #     num_processes  = num_processes,
+    #     overwrite      = True,
+    # )
+
+
+    # 6/22/26
+        # New RINs constructed with alpha-carbon contact rules.
+        # SASA already computed — only centrality + RCA needed.
+        # Filter: only proteins whose pdb_id appears in the reference CSV.
+    # 6/22/26
+    # New alpha-carbon RIN sets. SASA already computed — centrality + RCA only.
+    # Filtered to proteins present in the reference CSV (one row per residue).
+
+    # ---- configurable paths ----
+    reference_csv_path      = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7" / "test_standardized.csv"  # <-- update
+
+    no_prox_graphs_dir      = DATA_DIR_2 / "RINs_no_proximal"
+    no_prox_centrality_dir  = DATA_DIR_2 / "RINs_no_proximal" / "Centralities"
+
+    specific_graphs_dir     = DATA_DIR_2 / "RINs_specific_only"
+    specific_centrality_dir = DATA_DIR_2 / "RINs_specific_only" / "Centralities"
+    # ---- end configurable paths ----
+
+    # Build pdb_id filter set (deduplicated from residue-level CSV)
+
+    log_dir = DATA_DIR_2 / "logs"
+    logger  = setup_logger(log_dir, "rin_analysis_new_rins")
+    logger.info("=" * 60)
+    logger.info("NEW RIN ANALYSIS SESSION STARTED")
+
+    ref_df  = pd.read_csv(reference_csv_path)
+    ref_ids = set(ref_df["pdb_id"].dropna().str.upper())
+    logger.info(f"Reference CSV: {len(ref_ids)} unique pdb_ids loaded as filter.")
+
+    for graphs_dir, centrality_dir, label in [
+        (no_prox_graphs_dir,  no_prox_centrality_dir,  "RINs_no_proximal"),
+        (specific_graphs_dir, specific_centrality_dir, "RINs_specific_only"),
+    ]:
+        logger.info("-" * 40)
+        logger.info(f"New RIN set: {label}")
+
+        all_graphmls = sorted(Path(graphs_dir).glob("*.graphml"))
+        logger.info(f"Total GraphMLs found: {len(all_graphmls)}")
+
+        filtered_graphmls = [
+            f for f in all_graphmls
+            if f.stem.split("_")[0].upper() in ref_ids
+        ]
+        logger.info(f"After reference-CSV filter: {len(filtered_graphmls)}")
+
+        already_done = {
+            f.stem.replace("_centrality", "")
+            for f in Path(centrality_dir).glob("*_centrality.csv")
+        } if Path(centrality_dir).exists() else set()
+
+        to_process = [
+            f for f in filtered_graphmls
+            if f.stem.split("_")[0].upper() not in already_done
+            and f.stem.split("_")[0] not in already_done
+        ]
+        logger.info(f"Already complete: {len(already_done)} | To process: {len(to_process)}")
+
+        work_args = [
+            (str(f), str(centrality_dir))
+            for f in to_process
+        ]
+        run_parallel_centrality_only(work_args, logger, num_processes, label)
+
+        logger.info(f"Appending degree values to {label} centrality CSVs...")
+        append_degree_to_centrality(graphs_dir, centrality_dir)
+
+        logger.info(f"Appending RCA to {label} centrality CSVs...")
+        append_rca_to_centrality(
+            graphml_dir    = graphs_dir,
+            centrality_dir = centrality_dir,
+            cpl_method     = "harmonic",
+            num_processes  = num_processes,
+            overwrite      = False,
+        )

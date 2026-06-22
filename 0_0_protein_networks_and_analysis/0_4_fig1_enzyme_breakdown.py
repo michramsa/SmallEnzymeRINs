@@ -1,15 +1,23 @@
-# Purpose: Generate fig1_test_functional_breakdown.png
+# Purpose: Generate functional breakdown figures (closeness vs degree,
+#          betweenness vs closeness, betweenness vs degree) separately for
+#          each EC class, using only enzyme chains that share their EC class.
 #
-# Extends 0_4_fig1_recreation.py with:
-#   - load_functional_type_labels()  — parses biolip_functional_residues_detailed.csv
-#   - add_functional_type()          — joins functional_type onto test_df
-#   - plot_test_only_functional_breakdown() — scatter coloured by type
-#       binding   → blue   (#4472C4)
-#       catalytic → orange (#E8781A)
-#       dual      → red    (#CC2222)
-#       non-functional → light grey (#CCCCCC)
+# Extends 0_4_fig1_recreation_functional_breakdown_ver3.py with:
+#   - load_ec_classifications()  — parses test_set_ec_classifications.csv
+#   - filter_to_ec_class()       — filters test_df to a single EC class
+#   - Three plot wrappers that accept an ec_class_name label for titling /
+#     output naming.
 #
-# All other functions are carried over unchanged from 0_4_fig1_recreation.py.
+# Coloring scheme is identical to 0_4_fig1_recreation_functional_breakdown_ver3.py:
+#   binding        → #8E8278
+#   catalytic      → #35302B
+#   dual           → #E8E4DF
+#   non_functional → #CCCCCC
+#
+# Output files (one per EC class per plot type), e.g.:
+#   fig1_enzyme_breakdown_Hydrolases_closeness_vs_degree.png
+#   fig1_enzyme_breakdown_Hydrolases_betweenness_vs_closeness.png
+#   fig1_enzyme_breakdown_Hydrolases_betweenness_vs_degree.png
 
 import re
 import sys
@@ -41,18 +49,17 @@ ONE_TO_THREE = {
     "S": "SER", "T": "THR", "W": "TRP", "Y": "TYR", "V": "VAL",
 }
 
-# Residue token validation patterns (from 0_5_loo_experiment_ver6.py)
 EXPECTED_TOKEN  = re.compile(r'^[A-Z]\d+$')
 INSERTION_TOKEN = re.compile(r'^[A-Z]\d+[A-Za-z]+$')
 
 FUNCTIONAL_TYPES = ["catalytic", "binding", "dual"]
 
-# Colours for the breakdown plot
+# Colours carried over from 0_4_fig1_recreation_functional_breakdown_ver3.py
 FUNCTIONAL_TYPE_COLORS = {
-    "binding":        "#4472C4",   # blue
-    "catalytic":      "#E8781A",   # orange
-    "dual":           "#CC2222",   # red
-    "non_functional": "#CCCCCC",   # light grey
+    "binding":        "#8E8278",
+    "catalytic":      "#35302B",
+    "dual":           "#E8E4DF",
+    "non_functional": "#CCCCCC",
 }
 
 FUNCTIONAL_TYPE_LABELS = {
@@ -65,67 +72,10 @@ FUNCTIONAL_TYPE_LABELS = {
 # Draw order: non-functional first (background), then each functional type on top
 FUNCTIONAL_TYPE_DRAW_ORDER = ["non_functional", "binding", "catalytic", "dual"]
 
-RSA_COLORS = {
-    "exposed": "#E8781A",
-    "core":    "#2E8B2E",
-    "other":   "#4472C4",
-    "unknown": "#888888",
-}
-
-RSA_ORDER  = ["other", "core", "exposed", "unknown"]
-RSA_LABELS = {
-    "exposed": "Highly exposed (RSA > 0.5)",
-    "core":    "Core (RSA = 0)",
-    "other":   "Other (0 < RSA ≤ 0.5)",
-    "unknown": "RSA not available",
-}
-
-OVERLAY_COLORS = {
-    "exposed": "#D65F00",   # orange     — COLORS["orange"]
-    "core":    "#4878CF",   # blue       — COLORS["blue"]
-    "other":   "#76B7B2",   # teal       — COLORS["teal"]
-    "unknown": "#8D8D8D",   # mid_gray   — COLORS["mid_gray"]
-}
-
 AXIS_LIM = (-4, 4)
 
 
 # ── data loading ──────────────────────────────────────────────────────────────
-
-def load_biolip_functional_residues(biolip_csv: Path) -> pd.DataFrame:
-    """
-    Parse the BioLiP CSV and return a DataFrame of functional residue join keys.
-    (Carried over from 0_4_fig1_recreation.py — used by mark_functional_residues.)
-    """
-    biolip_df = pd.read_csv(biolip_csv)
-    records = []
-
-    for _, row in biolip_df.iterrows():
-        pdb_id = str(row["pdb_id"]).upper()
-        chain  = str(row["chain"])
-        tokens = str(row["functional_residues"]).split()
-
-        for token in tokens:
-            if not token:
-                continue
-            aa_one = token[0]
-            try:
-                res_num = int(token[1:])
-            except ValueError:
-                print(f"Warning: could not parse residue number from token '{token}' "
-                      f"in {pdb_id} — skipping.")
-                continue
-            aa_three = ONE_TO_THREE.get(aa_one, "UNK")
-            records.append({
-                "pdb_id":      pdb_id,
-                "chain":       chain,
-                "residue_num": res_num,
-                "aa_one":      aa_one,
-                "aa_three":    aa_three,
-            })
-
-    return pd.DataFrame(records)
-
 
 def load_functional_type_labels(detailed_csv: Path) -> pd.DataFrame:
     """
@@ -133,11 +83,6 @@ def load_functional_type_labels(detailed_csv: Path) -> pd.DataFrame:
     DataFrame with one row per (pdb_id, chain, residue_num, functional_type).
 
     functional_type is one of: 'catalytic', 'binding', 'dual'.
-
-    Residue tokens are validated at load time:
-      - Expected format : [single uppercase letter][integer]  e.g. C95
-      - Insertion codes : [letter][digits][trailing letter]   e.g. C95A  → skipped
-      - Other unexpected formats are flagged and skipped.
 
     Priority when a residue appears under multiple types:
         dual > catalytic > binding
@@ -237,8 +182,6 @@ def add_functional_type(df: pd.DataFrame, label_df: pd.DataFrame) -> pd.DataFram
         how      = "left",
     )
 
-    # pandas suffixes the column 'functional_type_y' only when test_df already
-    # contains a 'functional_type' column; otherwise it stays 'functional_type'.
     if "functional_type_y" in merged.columns:
         ft_col = "functional_type_y"
     else:
@@ -247,7 +190,6 @@ def add_functional_type(df: pd.DataFrame, label_df: pd.DataFrame) -> pd.DataFram
     df["functional_type"] = merged[ft_col].values
     df.drop(columns=["pdb_id_lower"], inplace=True)
 
-    # warn about test proteins absent from label_df
     test_ids  = set(df["pdb_id"].str.lower().unique())
     label_ids = set(label_dedup["pdb_id"].str.lower().unique())
     missing   = test_ids - label_ids
@@ -259,7 +201,6 @@ def add_functional_type(df: pd.DataFrame, label_df: pd.DataFrame) -> pd.DataFram
             f"Missing: {sorted(missing)}"
         )
 
-    # count breakdown
     counts = df["functional_type"].value_counts()
     print("\n── Functional type breakdown ─────────────────────────────────")
     for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
@@ -267,114 +208,6 @@ def add_functional_type(df: pd.DataFrame, label_df: pd.DataFrame) -> pd.DataFram
     print("─────────────────────────────────────────────────────────────\n")
 
     return df
-
-
-# ── standardization (carried over) ────────────────────────────────────────────
-
-def assign_rsa_category(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    if "RSA-empirical" not in df.columns:
-        df["RSA_category"] = "unknown"
-        return df
-    conditions = [df["RSA-empirical"] > 0.5, df["RSA-empirical"] == 0.0]
-    choices    = ["exposed", "core"]
-    df["RSA_category"] = np.select(conditions, choices, default="other")
-    return df
-
-
-# ── axis helpers (carried over) ───────────────────────────────────────────────
-
-def _format_axes(ax, title,
-                 xlabel="Standardized Closeness Centrality",
-                 ylabel="Standardized Degree Centrality"):
-    ax.set_xlim(AXIS_LIM)
-    ax.set_ylim(AXIS_LIM)
-    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
-    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
-    ax.set_xlabel(xlabel, fontsize=FONT["size_label"])
-    ax.set_ylabel(ylabel, fontsize=FONT["size_label"])
-    ax.set_title(title,   fontsize=FONT["size_title"])
-
-def _format_axes_no_title(ax,
-                 xlabel="Standardized Closeness Centrality",
-                 ylabel="Standardized Degree Centrality"):
-    ax.set_xlim(AXIS_LIM)
-    ax.set_ylim(AXIS_LIM)
-    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
-    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
-    ax.set_xlabel(xlabel, fontsize=FONT["size_label"])
-    ax.set_ylabel(ylabel, fontsize=FONT["size_label"])
-
-
-# ── new plot function ──────────────────────────────────────────────────────────
-
-def plot_test_only_functional_breakdown(test_df: pd.DataFrame,
-                                        output_path: Path) -> None:
-    """
-    Scatter of the test set coloured by functional residue type:
-        binding        → blue   (#4472C4)
-        catalytic      → orange (#E8781A)
-        dual           → red    (#CC2222)
-        non-functional → light grey (#CCCCCC)
-
-    Requires 'functional_type' column (added by add_functional_type).
-
-    Draw order: non-functional rendered first (background), then binding,
-    catalytic, and dual on top so the rarest category (dual) is always visible.
-
-    Parameters
-    ----------
-    test_df     : DataFrame with columns StdCloseness, StdDegree, functional_type.
-    output_path : Destination PNG file.
-    """
-    if "functional_type" not in test_df.columns:
-        raise ValueError(
-            "'functional_type' column not found. "
-            "Run add_functional_type() before calling this function."
-        )
-
-    counts = test_df["functional_type"].value_counts()
-    print(f"plot_test_only_functional_breakdown received: {len(test_df):,} rows")
-    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
-        print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
-
-    # ── scatter parameters per type ───────────────────────────────────────
-    scatter_params = {
-        "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
-        "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
-        "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
-        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="black", linewidths=0.6),
-    }
-
-    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
-
-    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
-        sub = test_df[test_df["functional_type"] == ftype]
-        if sub.empty:
-            continue
-        n   = len(sub)
-        ax.scatter(
-            sub["StdCloseness"],
-            sub["StdDegree"],
-            c=FUNCTIONAL_TYPE_COLORS[ftype],
-            label=f"{FUNCTIONAL_TYPE_LABELS[ftype]} (n={n:,})",
-            **scatter_params[ftype],
-        )
-
-    ax.legend(fontsize=FONT["size_legend"], loc="upper left")
-    # _format_axes(
-    #     ax,
-    #     f"Small Enzyme Test Set: Functional Residue Types\n"
-    #     f"(n = {len(test_df):,} residues, {test_df['pdb_id'].nunique()} proteins)\n"
-    #     "Closeness: per-protein z-score  |  Degree: per-AA-type z-score (ref population)",
-    #     xlabel="Standardized Closeness",
-    #     ylabel="Standardized Degree",
-    # )
-    _format_axes_no_title(ax)
-    fig.tight_layout()
-    save_fig(fig, output_path)
-    plt.close(fig)
-    print(f"Saved: {output_path}")
 
 
 def standardize_betweenness_per_protein(df: pd.DataFrame) -> pd.DataFrame:
@@ -404,34 +237,110 @@ def standardize_betweenness_per_protein(df: pd.DataFrame) -> pd.DataFrame:
     return df.groupby("pdb_id", group_keys=False).apply(_zscore)
 
 
-def plot_functional_breakdown_betweenness_vs_closeness(test_df: pd.DataFrame,
-                                                       output_path: Path,
-                                                       x_lim: tuple = AXIS_LIM,
-                                                       y_lim: tuple = (-4, 10)) -> None:
+# ── EC classification loading and filtering ───────────────────────────────────
+
+def load_ec_classifications(ec_csv: Path) -> pd.DataFrame:
     """
-    Scatter of the test set: StdCloseness (x) vs. StdBetweenness (y),
-    coloured by functional residue type. Mirrors plot_test_only_functional_breakdown().
+    Parse test_set_ec_classifications.csv and return a DataFrame with columns:
+        pdb_id (lowercase), prio_ec_number, ec_class_name.
+
+    Expected CSV format:
+        pdb_id,prio_ec_number,ec_class_name
+        2a11,3.1.26.3,Hydrolases
+    """
+    ec_df = pd.read_csv(ec_csv)
+    ec_df["pdb_id"] = ec_df["pdb_id"].str.lower().str.strip()
+    ec_df["ec_class_name"] = ec_df["ec_class_name"].str.strip()
+
+    print(f"EC classifications loaded: {len(ec_df):,} entries, "
+          f"{ec_df['ec_class_name'].nunique()} unique EC class(es).")
+    print(f"  Classes found: {sorted(ec_df['ec_class_name'].unique())}")
+    return ec_df
+
+
+def filter_to_ec_class(test_df: pd.DataFrame,
+                       ec_df: pd.DataFrame,
+                       ec_class_name: str) -> pd.DataFrame:
+    """
+    Filter test_df to only residues belonging to enzyme chains whose EC class
+    matches ec_class_name.
+
+    Only pdb_ids that appear in ec_df with the given ec_class_name are kept.
+    The match is case-insensitive on ec_class_name.
 
     Parameters
     ----------
-    test_df     : DataFrame with columns StdCloseness, StdBetweenness, functional_type.
-    output_path : Destination PNG file.
-    x_lim       : X-axis (StdCloseness) limits. Default (-4, 4).
-    y_lim       : Y-axis (StdBetweenness) limits. Default (-4, 10).
+    test_df       : Full residue-level DataFrame (already has functional_type).
+    ec_df         : Output of load_ec_classifications().
+    ec_class_name : EC class to filter to (e.g. 'Hydrolases').
+
+    Returns
+    -------
+    Filtered DataFrame containing only residues from matching enzyme chains.
     """
-    if "functional_type" not in test_df.columns:
+    mask = ec_df["ec_class_name"].str.lower() == ec_class_name.lower()
+    matching_ids = set(ec_df.loc[mask, "pdb_id"].str.lower())
+
+    if not matching_ids:
+        raise ValueError(
+            f"No pdb_ids found for EC class '{ec_class_name}'. "
+            f"Available classes: {sorted(ec_df['ec_class_name'].unique())}"
+        )
+
+    filtered = test_df[test_df["pdb_id"].str.lower().isin(matching_ids)].copy()
+
+    print(f"\n── EC class filter: '{ec_class_name}' ───────────────────────")
+    print(f"  Matching pdb_ids : {len(matching_ids)}")
+    print(f"  Residues retained: {len(filtered):,} "
+          f"(from {filtered['pdb_id'].nunique()} proteins)")
+    if filtered.empty:
+        import warnings
+        warnings.warn(
+            f"No residues remain after filtering to EC class '{ec_class_name}'. "
+            "Check that pdb_id casing matches between test_df and ec_df."
+        )
+    return filtered
+
+
+# ── axis helpers ──────────────────────────────────────────────────────────────
+
+def _format_axes_no_title(ax,
+                          xlabel="Standardized Closeness Centrality",
+                          ylabel="Standardized Degree Centrality"):
+    ax.set_xlim(AXIS_LIM)
+    ax.set_ylim(AXIS_LIM)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel(xlabel, fontsize=FONT["size_label"])
+    ax.set_ylabel(ylabel, fontsize=FONT["size_label"])
+
+
+# ── per-EC-class plot functions ───────────────────────────────────────────────
+
+def plot_enzyme_breakdown_closeness_vs_degree(ec_df_subset: pd.DataFrame,
+                                              output_path: Path,
+                                              x_lim: tuple = AXIS_LIM,
+                                              y_lim: tuple = AXIS_LIM) -> None:
+    """
+    Scatter of StdCloseness (x) vs StdDegree (y) for one EC class,
+    coloured by functional residue type.
+
+    Parameters
+    ----------
+    ec_df_subset : Residue-level DataFrame already filtered to one EC class,
+                   with columns StdCloseness, StdDegree, functional_type.
+    output_path  : Destination PNG file.
+    x_lim        : X-axis limits. Default (-4, 4).
+    y_lim        : Y-axis limits. Default (-4, 4).
+    """
+    if "functional_type" not in ec_df_subset.columns:
         raise ValueError(
             "'functional_type' column not found. "
             "Run add_functional_type() before calling this function."
         )
-    if "StdBetweenness" not in test_df.columns:
-        raise ValueError(
-            "'StdBetweenness' column not found. "
-            "Run standardize_betweenness_per_protein() before calling this function."
-        )
 
-    counts = test_df["functional_type"].value_counts()
-    print(f"plot_functional_breakdown_betweenness_vs_closeness received: {len(test_df):,} rows")
+    counts = ec_df_subset["functional_type"].value_counts()
+    print(f"plot_enzyme_breakdown_closeness_vs_degree received: {len(ec_df_subset):,} rows")
     for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
         print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
 
@@ -439,14 +348,79 @@ def plot_functional_breakdown_betweenness_vs_closeness(test_df: pd.DataFrame,
         "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
         "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
         "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
-        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="black", linewidths=0.6),
+        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="grey", linewidths=0.5),
     }
 
     apply_style()
     fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
 
     for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
-        sub = test_df[test_df["functional_type"] == ftype]
+        sub = ec_df_subset[ec_df_subset["functional_type"] == ftype]
+        if sub.empty:
+            continue
+        n = len(sub)
+        ax.scatter(
+            sub["StdCloseness"],
+            sub["StdDegree"],
+            c=FUNCTIONAL_TYPE_COLORS[ftype],
+            label=f"{FUNCTIONAL_TYPE_LABELS[ftype]} (n={n:,})",
+            **scatter_params[ftype],
+        )
+
+    ax.legend(fontsize=FONT["size_legend"], loc="upper left")
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    _format_axes_no_title(ax)
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
+def plot_enzyme_breakdown_betweenness_vs_closeness(ec_df_subset: pd.DataFrame,
+                                                   output_path: Path,
+                                                   x_lim: tuple = AXIS_LIM,
+                                                   y_lim: tuple = (-4, 10)) -> None:
+    """
+    Scatter of StdCloseness (x) vs StdBetweenness (y) for one EC class,
+    coloured by functional residue type.
+
+    Parameters
+    ----------
+    ec_df_subset : Residue-level DataFrame already filtered to one EC class,
+                   with columns StdCloseness, StdBetweenness, functional_type.
+    output_path  : Destination PNG file.
+    x_lim        : X-axis limits. Default (-4, 4).
+    y_lim        : Y-axis limits. Default (-4, 10).
+    """
+    if "functional_type" not in ec_df_subset.columns:
+        raise ValueError(
+            "'functional_type' column not found. "
+            "Run add_functional_type() before calling this function."
+        )
+    if "StdBetweenness" not in ec_df_subset.columns:
+        raise ValueError(
+            "'StdBetweenness' column not found. "
+            "Run standardize_betweenness_per_protein() before calling this function."
+        )
+
+    counts = ec_df_subset["functional_type"].value_counts()
+    print(f"plot_enzyme_breakdown_betweenness_vs_closeness received: {len(ec_df_subset):,} rows")
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
+
+    scatter_params = {
+        "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
+        "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
+        "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
+        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="grey", linewidths=0.6),
+    }
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        sub = ec_df_subset[ec_df_subset["functional_type"] == ftype]
         if sub.empty:
             continue
         n = len(sub)
@@ -471,34 +445,35 @@ def plot_functional_breakdown_betweenness_vs_closeness(test_df: pd.DataFrame,
     print(f"Saved: {output_path}")
 
 
-def plot_functional_breakdown_betweenness_vs_degree(test_df: pd.DataFrame,
-                                                    output_path: Path,
-                                                    x_lim: tuple = AXIS_LIM,
-                                                    y_lim: tuple = (-4, 10)) -> None:
+def plot_enzyme_breakdown_betweenness_vs_degree(ec_df_subset: pd.DataFrame,
+                                                output_path: Path,
+                                                x_lim: tuple = AXIS_LIM,
+                                                y_lim: tuple = (-4, 10)) -> None:
     """
-    Scatter of the test set: StdDegree (x) vs. StdBetweenness (y),
-    coloured by functional residue type. Mirrors plot_test_only_functional_breakdown().
+    Scatter of StdDegree (x) vs StdBetweenness (y) for one EC class,
+    coloured by functional residue type.
 
     Parameters
     ----------
-    test_df     : DataFrame with columns StdDegree, StdBetweenness, functional_type.
-    output_path : Destination PNG file.
-    x_lim       : X-axis (StdDegree) limits. Default (-4, 4).
-    y_lim       : Y-axis (StdBetweenness) limits. Default (-4, 10).
+    ec_df_subset : Residue-level DataFrame already filtered to one EC class,
+                   with columns StdDegree, StdBetweenness, functional_type.
+    output_path  : Destination PNG file.
+    x_lim        : X-axis limits. Default (-4, 4).
+    y_lim        : Y-axis limits. Default (-4, 10).
     """
-    if "functional_type" not in test_df.columns:
+    if "functional_type" not in ec_df_subset.columns:
         raise ValueError(
             "'functional_type' column not found. "
             "Run add_functional_type() before calling this function."
         )
-    if "StdBetweenness" not in test_df.columns:
+    if "StdBetweenness" not in ec_df_subset.columns:
         raise ValueError(
             "'StdBetweenness' column not found. "
             "Run standardize_betweenness_per_protein() before calling this function."
         )
 
-    counts = test_df["functional_type"].value_counts()
-    print(f"plot_functional_breakdown_betweenness_vs_degree received: {len(test_df):,} rows")
+    counts = ec_df_subset["functional_type"].value_counts()
+    print(f"plot_enzyme_breakdown_betweenness_vs_degree received: {len(ec_df_subset):,} rows")
     for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
         print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
 
@@ -506,14 +481,14 @@ def plot_functional_breakdown_betweenness_vs_degree(test_df: pd.DataFrame,
         "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
         "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
         "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
-        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="black", linewidths=0.6),
+        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="grey", linewidths=0.6),
     }
 
     apply_style()
     fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
 
     for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
-        sub = test_df[test_df["functional_type"] == ftype]
+        sub = ec_df_subset[ec_df_subset["functional_type"] == ftype]
         if sub.empty:
             continue
         n = len(sub)
@@ -546,12 +521,16 @@ if __name__ == "__main__":
     ver_dir      = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7"
     test_csv     = ver_dir / "test_standardized.csv"
     detailed_csv = DATA_DIR_2 / "biolip_functional_residues_detailed.csv"
+    ec_csv       = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7" / "test_set_ec_classifications.csv"
+    out_dir      = ver_dir / "enzyme_breakdown_by_ec_class"
     # ─────────────────────────────────────────────────────────────────────
+
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Load standardized test data
     test_df = pd.read_csv(test_csv)
 
-    # 2. Standardize betweenness (not saved in the CSV by main_size_controlled)
+    # 2. Standardize betweenness per protein
     test_df = standardize_betweenness_per_protein(test_df)
 
     # 3. Load functional type labels from detailed BioLiP CSV
@@ -560,22 +539,43 @@ if __name__ == "__main__":
     # 4. Join functional_type onto test_df
     test_df = add_functional_type(test_df, label_df)
 
-    # 5. Closeness vs. Degree breakdown (original)
-    plot_test_only_functional_breakdown(
-        test_df,
-        ver_dir / "fig1_test_functional_breakdown.png",
-    )
+    # 5. Load EC classifications
+    ec_df = load_ec_classifications(ec_csv)
 
-    # 6. Betweenness vs. Closeness breakdown
-    plot_functional_breakdown_betweenness_vs_closeness(
-        test_df,
-        ver_dir / "fig1_test_functional_breakdown_betweenness_vs_closeness.png",
-    )
+    # 6. Iterate over every unique EC class and produce three figures each
+    ec_classes = sorted(ec_df["ec_class_name"].unique())
+    print(f"\nGenerating figures for {len(ec_classes)} EC class(es): {ec_classes}\n")
 
-    # 7. Betweenness vs. Degree breakdown
-    plot_functional_breakdown_betweenness_vs_degree(
-        test_df,
-        ver_dir / "fig1_test_functional_breakdown_betweenness_vs_degree.png",
-    )
+    for ec_class in ec_classes:
+        # Sanitize class name for use in filenames (replace spaces with underscores)
+        safe_name = ec_class.replace(" ", "_")
+
+        print(f"\n{'='*60}")
+        print(f"EC class: {ec_class}")
+        print(f"{'='*60}")
+
+        ec_subset = filter_to_ec_class(test_df, ec_df, ec_class)
+
+        if ec_subset.empty:
+            print(f"  Skipping '{ec_class}' — no residues after filtering.")
+            continue
+
+        # Figure A: Closeness vs Degree
+        plot_enzyme_breakdown_closeness_vs_degree(
+            ec_subset,
+            out_dir / f"fig1_enzyme_breakdown_{safe_name}_closeness_vs_degree.png",
+        )
+
+        # Figure B: Betweenness vs Closeness
+        plot_enzyme_breakdown_betweenness_vs_closeness(
+            ec_subset,
+            out_dir / f"fig1_enzyme_breakdown_{safe_name}_betweenness_vs_closeness.png",
+        )
+
+        # Figure C: Betweenness vs Degree
+        plot_enzyme_breakdown_betweenness_vs_degree(
+            ec_subset,
+            out_dir / f"fig1_enzyme_breakdown_{safe_name}_betweenness_vs_degree.png",
+        )
 
     print("\nDone.")

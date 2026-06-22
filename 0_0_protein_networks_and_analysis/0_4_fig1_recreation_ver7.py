@@ -38,6 +38,9 @@ import matplotlib.patches as mpatches
 import numpy as np
 from figure_style_ver2 import apply_style, save_fig, validate_figure, FIG_SIZE, FONT, LAYOUT, DPI, COLORS
 from scipy import stats
+
+from plot_stdcentrality_frequency_by_functional_type import plot_stdcentrality_frequency_by_functional_type
+
 # 20 canonical amino acids — only these are included in analysis
 CANONICAL_AA = {
     "ALA", "ARG", "ASN", "ASP", "CYS",
@@ -284,6 +287,34 @@ ONE_TO_THREE = {
     "S": "SER", "T": "THR", "W": "TRP", "Y": "TYR", "V": "VAL",
 }
 
+# ── functional-type constants (shared with functional_breakdown scripts) ────────
+
+import re as _re
+
+FUNCTIONAL_TYPES = ["catalytic", "binding", "dual"]
+
+# Residue token validation patterns
+_EXPECTED_TOKEN  = _re.compile(r'^[A-Z]\d+$')
+_INSERTION_TOKEN = _re.compile(r'^[A-Z]\d+[A-Za-z]+$')
+
+# Colours for the functional-type breakdown plots
+FUNCTIONAL_TYPE_COLORS = {
+    "binding":        "#8E8278",
+    "catalytic":      "#35302B",
+    "dual":           "#E8E4DF",
+    "non_functional": "#CCCCCC",
+}
+
+FUNCTIONAL_TYPE_LABELS = {
+    "binding":        "Binding",
+    "catalytic":      "Catalytic",
+    "dual":           "Dual (binding + catalytic)",
+    "non_functional": "Non-functional",
+}
+
+# Draw order: non-functional background first, rarest (dual) on top
+FUNCTIONAL_TYPE_DRAW_ORDER = ["non_functional", "binding", "catalytic", "dual"]
+
 
 def load_biolip_functional_residues(biolip_csv: Path) -> pd.DataFrame:
     """
@@ -419,6 +450,146 @@ def mark_functional_residues(test_df: pd.DataFrame,
           f"({100 * n_func / n_total:.1f}%)")
 
     return test_df
+
+
+def load_functional_type_labels(detailed_csv: Path) -> pd.DataFrame:
+    """
+    Parse biolip_functional_residues_detailed.csv and return a long-form
+    DataFrame with one row per (pdb_id, chain, residue_num, functional_type).
+
+    functional_type is one of: 'catalytic', 'binding', 'dual'.
+
+    Residue tokens are validated at load time:
+      - Expected format : [single uppercase letter][integer]  e.g. C95
+      - Insertion codes : [letter][digits][trailing letter]   e.g. C95A  → skipped
+      - Other unexpected formats are flagged and skipped.
+
+    Priority when a residue appears under multiple types:
+        dual > catalytic > binding
+    """
+    df = pd.read_csv(detailed_csv)
+    df["pdb_id"] = df["pdb_id"].str.lower()
+    df["chain"]  = df["chain"].str.strip()
+
+    records             = []
+    n_insertion         = 0
+    n_unexpected        = 0
+    insertion_examples  = []
+    unexpected_examples = []
+
+    type_cols = {
+        "catalytic": "catalytic_residues",
+        "binding":   "binding_residues",
+        "dual":      "dual_residues",
+    }
+
+    for _, row in df.iterrows():
+        pdb_id = row["pdb_id"]
+        chain  = row["chain"]
+
+        for ftype, col in type_cols.items():
+            cell = row.get(col, None)
+            if pd.isna(cell) or str(cell).strip() == "":
+                continue
+            tokens = str(cell).strip().split()
+            for token in tokens:
+                if _EXPECTED_TOKEN.match(token):
+                    residue_num = int(token[1:])
+                    records.append({
+                        "pdb_id":          pdb_id,
+                        "chain":           chain,
+                        "residue_num":     residue_num,
+                        "functional_type": ftype,
+                    })
+                elif _INSERTION_TOKEN.match(token):
+                    n_insertion += 1
+                    if len(insertion_examples) < 10:
+                        insertion_examples.append(f"{pdb_id}:{chain}:{token}")
+                else:
+                    n_unexpected += 1
+                    if len(unexpected_examples) < 10:
+                        unexpected_examples.append(f"{pdb_id}:{chain}:{token}")
+
+    if n_insertion > 0:
+        print(f"Warning: insertion code tokens skipped: {n_insertion}. "
+              f"Examples: {insertion_examples}")
+    if n_unexpected > 0:
+        print(f"Warning: unexpected token formats skipped: {n_unexpected}. "
+              f"Examples: {unexpected_examples}")
+
+    label_df = pd.DataFrame(records)
+    label_df = label_df.drop_duplicates(
+        subset=["pdb_id", "chain", "residue_num", "functional_type"]
+    )
+
+    print(f"Functional type labels loaded: {len(label_df):,} tokens across "
+          f"{label_df['pdb_id'].nunique()} proteins.")
+    return label_df
+
+
+def add_functional_type(df: pd.DataFrame, label_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Join functional_type labels onto a residue-level DataFrame.
+
+    Join key: pdb_id (lowercase) + Chain + Residue number.
+    Residues not found in label_df receive functional_type = 'non_functional'.
+
+    When a residue appears under multiple functional types in label_df,
+    the highest-priority type is kept:
+        dual > catalytic > binding
+    """
+    df = df.copy()
+    df["pdb_id_lower"]   = df["pdb_id"].str.lower()
+    df["Residue number"] = df["Residue number"].astype(int)
+
+    label_df = label_df.copy()
+    label_df["chain"] = label_df["chain"].str.strip()
+
+    type_priority = {"dual": 0, "catalytic": 1, "binding": 2}
+    label_df["_priority"] = label_df["functional_type"].map(type_priority)
+
+    label_dedup = (
+        label_df
+        .sort_values("_priority")
+        .drop_duplicates(subset=["pdb_id", "chain", "residue_num"], keep="first")
+        .drop(columns=["_priority"])
+    )
+
+    merged = df.merge(
+        label_dedup,
+        left_on  = ["pdb_id_lower", "Chain", "Residue number"],
+        right_on = ["pdb_id",       "chain", "residue_num"],
+        how      = "left",
+    )
+
+    # handle suffix collision if functional_type column already exists
+    if "functional_type_y" in merged.columns:
+        ft_col = "functional_type_y"
+    else:
+        ft_col = "functional_type"
+    merged[ft_col] = merged[ft_col].fillna("non_functional")
+    df["functional_type"] = merged[ft_col].values
+    df.drop(columns=["pdb_id_lower"], inplace=True)
+
+    # warn about test proteins absent from label_df
+    test_ids  = set(df["pdb_id"].str.lower().unique())
+    label_ids = set(label_dedup["pdb_id"].str.lower().unique())
+    missing   = test_ids - label_ids
+    if missing:
+        import warnings
+        warnings.warn(
+            f"{len(missing)} test-set protein(s) have no entry in the detailed CSV — "
+            f"all their residues will be labeled non_functional. "
+            f"Missing: {sorted(missing)}"
+        )
+
+    counts = df["functional_type"].value_counts()
+    print("\n── Functional type breakdown ─────────────────────────────────")
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
+    print("─────────────────────────────────────────────────────────────\n")
+
+    return df
 
 
 def _scatter_by_rsa(ax, df, color_map, alpha=0.4, s=6, zorder=2, edgecolors="white"):
@@ -641,6 +812,44 @@ def _scatter_by_rsa_betweenness_vs_degree(ax, df, color_map,
             c=color_map[cat], alpha=alpha, s=s,
             zorder=zorder, edgecolors=edgecolors, label=None,
         )
+
+
+def _scatter_by_rsa_degree_vs_betweenness(ax, df, color_map,
+                                           alpha=0.4, s=6,
+                                           zorder=2, edgecolors="white"):
+    """
+    Scatter helper: StdBetweenness (x) vs. StdDegree (y), colored by RSA category.
+    Mirrors _scatter_by_rsa_betweenness_vs_degree() but with axes swapped:
+    betweenness on x, degree on y.
+    """
+    for cat in RSA_ORDER:
+        sub = df[df["RSA_category"] == cat]
+        if sub.empty:
+            continue
+        ax.scatter(
+            sub["StdBetweenness"], sub["StdDegree"],
+            c=color_map[cat], alpha=alpha, s=s,
+            zorder=zorder, edgecolors=edgecolors, label=None,
+        )
+
+
+def _scatter_by_rsa_degree_vs_rca(ax, df, color_map,
+                                   alpha=0.4, s=6,
+                                   zorder=2, edgecolors="white"):
+    """
+    Scatter helper: RCA_zscore (x) vs. StdDegree (y), colored by RSA category.
+    Mirrors _scatter_by_rsa_rca_vs_closeness() but places RCA_zscore on x
+    and StdDegree on y.
+    """
+    for cat in RSA_ORDER:
+        sub = df[df["RSA_category"] == cat]
+        if sub.empty:
+            continue
+        ax.scatter(
+            sub["RCA_zscore"], sub["StdDegree"],
+            c=color_map[cat], alpha=alpha, s=s,
+            zorder=zorder, edgecolors=edgecolors, label=None,
+        )
  
  
 # ── test-only plots ───────────────────────────────────────────────────────────
@@ -737,6 +946,122 @@ def plot_test_only_betweenness_vs_degree(test_df: pd.DataFrame,
     print(f"Saved: {output_path}")
  
  
+def plot_test_only_degree_vs_betweenness(test_df: pd.DataFrame,
+                                         output_path: Path,
+                                         x_lim: tuple = (-4, 10),
+                                         y_lim: tuple = AXIS_LIM):
+    """
+    Scatter of the test set: StdBetweenness (x) vs. StdDegree (y),
+    colored by RSA category. Mirrors plot_test_only() and
+    plot_test_only_betweenness_vs_closeness(), but swaps the axes so that
+    betweenness is on x and degree is on y.
+
+    Parameters
+    ----------
+    test_df    : pd.DataFrame  Must contain 'StdBetweenness', 'StdDegree',
+                               and 'RSA_category' columns.
+                               Run standardize_betweenness_per_protein() and
+                               assign_rsa_category() before calling.
+    output_path: Path          Destination file (PNG / TIFF).
+    x_lim      : tuple         X-axis (StdBetweenness) limits. Default (-4, 10).
+    y_lim      : tuple         Y-axis (StdDegree) limits. Default (-4, 4).
+    """
+    for col in ("StdBetweenness", "StdDegree", "RSA_category"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the test DataFrame has been processed by "
+                "standardize_betweenness_per_protein(), standardize_degree_by_aa(), "
+                "and assign_rsa_category()."
+            )
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    _scatter_by_rsa_degree_vs_betweenness(
+        ax, test_df, OVERLAY_COLORS, alpha=0.70, s=18, zorder=2,
+        edgecolors="white",
+    )
+
+    patches = [
+        mpatches.Patch(color=OVERLAY_COLORS[cat], label=RSA_LABELS[cat])
+        for cat in RSA_ORDER
+        if not test_df[test_df["RSA_category"] == cat].empty
+    ]
+    ax.legend(handles=patches, fontsize=FONT["size_legend"], loc="upper right")
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel("Standardized Betweenness Centrality", fontsize=FONT["size_label"])
+    ax.set_ylabel("Standardized Degree Centrality",      fontsize=FONT["size_label"])
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
+def plot_test_only_degree_vs_rca(test_df: pd.DataFrame,
+                                 output_path: Path,
+                                 x_lim: tuple = (-4, 10),
+                                 y_lim: tuple = AXIS_LIM):
+    """
+    Scatter of the test set: RCA_zscore (x) vs. StdDegree (y),
+    colored by RSA category. Mirrors plot_test_only_rca_vs_closeness() but
+    places StdDegree on the y-axis instead of StdCloseness.
+
+    A dotted vertical line at x = 2 marks the CICD threshold
+    (del Sol et al. 2006): residues to the right of this line are classified
+    as Centrally Interconnected Conserved Determinants.
+
+    Parameters
+    ----------
+    test_df    : pd.DataFrame  Must contain 'RCA_zscore', 'StdDegree',
+                               and 'RSA_category' columns.
+                               Run merge_rca_into_standardized() (or
+                               append_rca_to_centrality()), standardize_degree_by_aa(),
+                               and assign_rsa_category() before calling.
+    output_path: Path          Destination file (PNG / TIFF).
+    x_lim      : tuple         X-axis (RCA_zscore) limits. Default (-4, 10).
+    y_lim      : tuple         Y-axis (StdDegree) limits. Default (-4, 4).
+    """
+    for col in ("RCA_zscore", "StdDegree", "RSA_category"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the test DataFrame has been processed by "
+                "append_rca_to_centrality() (or merge_rca_into_standardized()), "
+                "standardize_degree_by_aa(), and assign_rsa_category()."
+            )
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    _scatter_by_rsa_degree_vs_rca(
+        ax, test_df, OVERLAY_COLORS, alpha=0.70, s=18, zorder=2,
+        edgecolors="white",
+    )
+
+    patches = [
+        mpatches.Patch(color=OVERLAY_COLORS[cat], label=RSA_LABELS[cat])
+        for cat in RSA_ORDER
+        if not test_df[test_df["RSA_category"] == cat].empty
+    ]
+    ax.legend(handles=patches, fontsize=FONT["size_legend"], loc="upper right")
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel("RCA Z-score",                    fontsize=FONT["size_label"])
+    ax.set_ylabel("Standardized Degree Centrality", fontsize=FONT["size_label"])
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
 # ── overlay plots ─────────────────────────────────────────────────────────────
  
 def plot_overlay_betweenness_vs_closeness(ref_df: pd.DataFrame,
@@ -1126,6 +1451,461 @@ def plot_stdbetweenness_frequency(df: pd.DataFrame,
     plt.close(fig)
     print(f"Saved: {output_path}")
 
+# ── RCA scatter helpers ───────────────────────────────────────────────────────
+
+def _scatter_by_rsa_rca_vs_closeness(ax, df, color_map,
+                                     alpha=0.4, s=6,
+                                     zorder=2, edgecolors="white"):
+    """
+    Scatter helper: StdCloseness (x) vs. RCA_zscore (y), colored by RSA category.
+    """
+    for cat in RSA_ORDER:
+        sub = df[df["RSA_category"] == cat]
+        if sub.empty:
+            continue
+        ax.scatter(
+            sub["StdCloseness"], sub["RCA_zscore"],
+            c=color_map[cat], alpha=alpha, s=s,
+            zorder=zorder, edgecolors=edgecolors, label=None,
+        )
+
+
+def plot_test_only_rca_vs_closeness(test_df: pd.DataFrame,
+                                    output_path: Path,
+                                    x_lim: tuple = AXIS_LIM,
+                                    y_lim: tuple = (-4, 10)):
+    """
+    Scatter of the test set: StdCloseness (x) vs. RCA_zscore (y),
+    colored by RSA category. Mirrors plot_test_only_betweenness_vs_closeness().
+
+    The horizontal dashed line at y = 2 marks the CICD threshold
+    (del Sol et al. 2006): residues above this line are classified as
+    Centrally Interconnected Conserved Determinants.
+
+    Parameters
+    ----------
+    test_df    : pd.DataFrame  Must contain 'StdCloseness', 'RCA_zscore',
+                               and 'RSA_category' columns.
+    output_path: Path          Destination file (PNG / TIFF).
+    x_lim      : tuple         X-axis (StdCloseness) limits. Default (-4, 4).
+    y_lim      : tuple         Y-axis (RCA_zscore) limits. Default (-4, 10).
+    """
+    for col in ("StdCloseness", "RCA_zscore", "RSA_category"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the centrality CSVs have been processed by "
+                "append_rca_to_centrality() and standardize_closeness_per_protein()."
+            )
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    _scatter_by_rsa_rca_vs_closeness(
+        ax, test_df, OVERLAY_COLORS, alpha=0.70, s=18, zorder=2,
+        edgecolors="white",
+    )
+
+    patches = [
+        mpatches.Patch(color=OVERLAY_COLORS[cat], label=RSA_LABELS[cat])
+        for cat in RSA_ORDER
+        if not test_df[test_df["RSA_category"] == cat].empty
+    ]
+    ax.legend(handles=patches, fontsize=FONT["size_legend"], loc="upper left")
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
+    # CICD threshold line at z = 2
+    ax.axhline(2, color="black", linewidth=0.8, linestyle=":",
+               label="CICD threshold (z = 2)")
+    ax.set_xlabel("Standardized Closeness Centrality", fontsize=FONT["size_label"])
+    ax.set_ylabel("RCA Z-score",                       fontsize=FONT["size_label"])
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
+def plot_overlay_rca_vs_closeness(ref_df: pd.DataFrame,
+                                  test_df: pd.DataFrame,
+                                  output_path: Path,
+                                  x_lim: tuple = AXIS_LIM,
+                                  y_lim: tuple = (-4, 10)):
+    """
+    Overlay scatter: StdCloseness (x) vs. RCA_zscore (y).
+    Reference set as muted background, test set as prominent foreground.
+    Mirrors plot_overlay_betweenness_vs_closeness().
+
+    Parameters
+    ----------
+    ref_df     : pd.DataFrame  Reference set; must contain 'StdCloseness',
+                               'RCA_zscore', and 'RSA_category'.
+    test_df    : pd.DataFrame  Test set; same column requirements.
+    output_path: Path          Destination file.
+    x_lim      : tuple         X-axis limits. Default (-4, 4).
+    y_lim      : tuple         Y-axis limits. Default (-4, 10).
+    """
+    for col in ("StdCloseness", "RCA_zscore", "RSA_category"):
+        for label, df in [("ref_df", ref_df), ("test_df", test_df)]:
+            if col not in df.columns:
+                raise ValueError(
+                    f"'{col}' column not found in {label}. "
+                    "Ensure centrality CSVs have been processed by "
+                    "append_rca_to_centrality()."
+                )
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    # reference set — muted background
+    _scatter_by_rsa_rca_vs_closeness(
+        ax, ref_df, RSA_COLORS, alpha=0.20, s=4, zorder=2,
+    )
+    # test set — prominent foreground
+    _scatter_by_rsa_rca_vs_closeness(
+        ax, test_df, OVERLAY_COLORS, alpha=0.70, s=18, zorder=3,
+        edgecolors="white",
+    )
+
+    ref_patches = [
+        mpatches.Patch(color=RSA_COLORS[cat], alpha=0.5,
+                       label=f"Ref: {RSA_LABELS[cat]}")
+        for cat in RSA_ORDER
+        if not ref_df[ref_df["RSA_category"] == cat].empty
+    ]
+    test_patches = [
+        mpatches.Patch(color=OVERLAY_COLORS[cat],
+                       label=f"Test: {RSA_LABELS[cat]}")
+        for cat in RSA_ORDER
+        if not test_df[test_df["RSA_category"] == cat].empty
+    ]
+    ax.legend(
+        handles=ref_patches + test_patches,
+        fontsize=FONT["size_legend"],
+        loc="upper left",
+        title="Reference set  /  Small enzyme test set",
+        title_fontsize=FONT["size_legend"],
+    )
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.axvline(0, color="grey", linewidth=0.6, linestyle="--")
+    # CICD threshold
+    ax.axhline(2, color="black", linewidth=0.8, linestyle=":",
+               label="CICD threshold (z = 2)")
+    ax.set_xlabel("Standardized Closeness Centrality", fontsize=FONT["size_label"])
+    ax.set_ylabel("RCA Z-score",                       fontsize=FONT["size_label"])
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
+# ── RSA vs StdCloseness scatter ───────────────────────────────────────────────
+
+def plot_test_only_rsa_vs_closeness(test_df: pd.DataFrame,
+                                    output_path: Path,
+                                    x_lim: tuple = (0.0, 1.0),
+                                    y_lim: tuple = AXIS_LIM):
+    """
+    Scatter of the test set: RSA-empirical (x) vs. Standardized Closeness
+    Centrality (y). All residues are plotted in light grey; functional residues
+    (from BioLiP, added by mark_functional_residues()) are overlaid in black.
+
+    This plot mirrors Figure 2 of Amitai et al. (2004), which reports a
+    partial correlation of r = -0.32 between RSA and closeness, demonstrating
+    that the two measures are related but independent predictors of active-site
+    residues.
+
+    Parameters
+    ----------
+    test_df    : pd.DataFrame  Must contain 'RSA-empirical', 'StdCloseness',
+                               and 'is_functional' columns.
+                               Call mark_functional_residues() before this function.
+    output_path: Path          Destination file (PNG / TIFF).
+    x_lim      : tuple         X-axis (RSA-empirical) limits. Default (0.0, 1.0).
+    y_lim      : tuple         Y-axis (StdCloseness) limits. Default (-4, 4).
+    """
+    for col in ("RSA-empirical", "StdCloseness", "is_functional"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the test DataFrame has been processed by "
+                "load_centrality_dir() (with sasa_dir provided), "
+                "standardize_closeness_per_protein(), and mark_functional_residues()."
+            )
+
+    plot_df = test_df[["RSA-empirical", "StdCloseness", "is_functional"]].dropna(
+        subset=["RSA-empirical", "StdCloseness"]
+    )
+    n_dropped = len(test_df) - len(plot_df)
+    if n_dropped > 0:
+        print(f"  plot_test_only_rsa_vs_closeness: dropped {n_dropped} rows "
+              f"with NaN in RSA-empirical or StdCloseness.")
+
+    non_func = plot_df[~plot_df["is_functional"]]
+    func     = plot_df[plot_df["is_functional"]]
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    # non-functional residues — light grey background layer
+    ax.scatter(
+        non_func["RSA-empirical"], non_func["StdCloseness"],
+        c="#CCCCCC", alpha=0.5, s=12, zorder=2,
+        edgecolors="white",
+        label=f"Non-functional (n={len(non_func):,})",
+    )
+
+    # functional residues — black foreground layer
+    ax.scatter(
+        func["RSA-empirical"], func["StdCloseness"],
+        c="black", alpha=0.9, s=30, zorder=3,
+        edgecolors="white", linewidths=0.5,
+        label=f"Functional residues (n={len(func):,})",
+    )
+
+    ax.legend(fontsize=FONT["size_legend"], loc="upper right")
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel("RSA (empirical)",                   fontsize=FONT["size_label"])
+    ax.set_ylabel("Standardized Closeness Centrality", fontsize=FONT["size_label"])
+
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+def plot_test_only_rsa_vs_closeness_2(test_df: pd.DataFrame,
+                                      output_path: Path,
+                                      x_lim: tuple = (0.0, 1.0),
+                                      y_lim: tuple = AXIS_LIM):
+    for col in ("RSA-empirical", "StdCloseness", "functional_type"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the test DataFrame has been processed by "
+                "load_centrality_dir() (with sasa_dir provided) and "
+                "add_functional_type()."
+            )
+
+    plot_df = test_df[["RSA-empirical", "StdCloseness", "functional_type"]].dropna(
+        subset=["RSA-empirical", "StdCloseness"]
+    )
+    n_dropped = len(test_df) - len(plot_df)
+    if n_dropped > 0:
+        print(f"  plot_test_only_rsa_vs_closeness_2: dropped {n_dropped} rows "
+              f"with NaN in RSA-empirical or ClosenessCentrality.")
+
+    counts = plot_df["functional_type"].value_counts()
+    print(f"plot_test_only_rsa_vs_closeness_2 received: {len(plot_df):,} rows")
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
+
+    scatter_params = {
+        "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
+        "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
+        "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
+        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="white", linewidths=0.6),
+    }
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        sub = plot_df[plot_df["functional_type"] == ftype]
+        if sub.empty:
+            continue
+        n = len(sub)
+        ax.scatter(
+            sub["RSA-empirical"],
+            sub["StdCloseness"],
+            c=FUNCTIONAL_TYPE_COLORS[ftype],
+            label=f"{FUNCTIONAL_TYPE_LABELS[ftype]} (n={n:,})",
+            **scatter_params[ftype],
+        )
+
+    ax.legend(fontsize=FONT["size_legend"], loc="upper right")
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel("RSA (empirical)",      fontsize=FONT["size_label"])
+    ax.set_ylabel("Standardized Closeness Centrality", fontsize=FONT["size_label"])
+
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
+def plot_test_only_rsa_vs_betweenness(test_df: pd.DataFrame,
+                                      output_path: Path,
+                                      x_lim: tuple = (0.0, 1.0),
+                                      y_lim: tuple = (-4, 10)):
+    """
+    Scatter of the test set: RSA-empirical (x) vs. Standardized Betweenness
+    Centrality (y), coloured by functional residue type.
+
+    Mirrors plot_test_only_rsa_vs_closeness_2() but places StdBetweenness on
+    the y-axis.  The draw order (non-functional → binding → catalytic → dual)
+    ensures the rarest category remains visible.
+
+    Parameters
+    ----------
+    test_df     : pd.DataFrame  Must contain 'RSA-empirical', 'StdBetweenness',
+                                and 'functional_type' columns.
+                                Call standardize_betweenness_per_protein() and
+                                add_functional_type() before this function.
+    output_path : Path          Destination file (PNG / TIFF).
+    x_lim       : tuple         X-axis (RSA-empirical) limits. Default (0.0, 1.0).
+    y_lim       : tuple         Y-axis (StdBetweenness) limits. Default (-4, 10).
+    """
+    for col in ("RSA-empirical", "StdBetweenness", "functional_type"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the test DataFrame has been processed by "
+                "load_centrality_dir() (with sasa_dir provided), "
+                "standardize_betweenness_per_protein(), and add_functional_type()."
+            )
+
+    plot_df = test_df[["RSA-empirical", "StdBetweenness", "functional_type"]].dropna(
+        subset=["RSA-empirical", "StdBetweenness"]
+    )
+    n_dropped = len(test_df) - len(plot_df)
+    if n_dropped > 0:
+        print(f"  plot_test_only_rsa_vs_betweenness: dropped {n_dropped} rows "
+              f"with NaN in RSA-empirical or StdBetweenness.")
+
+    counts = plot_df["functional_type"].value_counts()
+    print(f"plot_test_only_rsa_vs_betweenness received: {len(plot_df):,} rows")
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
+
+    scatter_params = {
+        "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
+        "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
+        "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
+        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="white", linewidths=0.6),
+    }
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        sub = plot_df[plot_df["functional_type"] == ftype]
+        if sub.empty:
+            continue
+        n = len(sub)
+        ax.scatter(
+            sub["RSA-empirical"],
+            sub["StdBetweenness"],
+            c=FUNCTIONAL_TYPE_COLORS[ftype],
+            label=f"{FUNCTIONAL_TYPE_LABELS[ftype]} (n={n:,})",
+            **scatter_params[ftype],
+        )
+
+    ax.legend(fontsize=FONT["size_legend"], loc="upper right")
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel("RSA (empirical)",                      fontsize=FONT["size_label"])
+    ax.set_ylabel("Standardized Betweenness Centrality",  fontsize=FONT["size_label"])
+
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
+def plot_test_only_rsa_vs_rca_zscore(test_df: pd.DataFrame,
+                                     output_path: Path,
+                                     x_lim: tuple = (0.0, 1.0),
+                                     y_lim: tuple = (-4, 10)):
+    """
+    Scatter of the test set: RSA-empirical (x) vs. RCA Z-score (y),
+    coloured by functional residue type.
+
+    Mirrors plot_test_only_rsa_vs_closeness_2() but places RCA_zscore on
+    the y-axis.  A dotted horizontal line marks the CICD threshold (z = 2)
+    from del Sol et al. (2006).  The draw order (non-functional → binding →
+    catalytic → dual) ensures the rarest category remains visible.
+
+    Parameters
+    ----------
+    test_df     : pd.DataFrame  Must contain 'RSA-empirical', 'RCA_zscore',
+                                and 'functional_type' columns.
+                                Call append_rca_to_centrality() (or
+                                merge_rca_into_standardized()) and
+                                add_functional_type() before this function.
+    output_path : Path          Destination file (PNG / TIFF).
+    x_lim       : tuple         X-axis (RSA-empirical) limits. Default (0.0, 1.0).
+    y_lim       : tuple         Y-axis (RCA_zscore) limits. Default (-4, 10).
+    """
+    for col in ("RSA-empirical", "RCA_zscore", "functional_type"):
+        if col not in test_df.columns:
+            raise ValueError(
+                f"'{col}' column not found. "
+                "Ensure the test DataFrame has been processed by "
+                "load_centrality_dir() (with sasa_dir provided), "
+                "append_rca_to_centrality() (or merge_rca_into_standardized()), "
+                "and add_functional_type()."
+            )
+
+    plot_df = test_df[["RSA-empirical", "RCA_zscore", "functional_type"]].dropna(
+        subset=["RSA-empirical", "RCA_zscore"]
+    )
+    n_dropped = len(test_df) - len(plot_df)
+    if n_dropped > 0:
+        print(f"  plot_test_only_rsa_vs_rca_zscore: dropped {n_dropped} rows "
+              f"with NaN in RSA-empirical or RCA_zscore.")
+
+    counts = plot_df["functional_type"].value_counts()
+    print(f"plot_test_only_rsa_vs_rca_zscore received: {len(plot_df):,} rows")
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        print(f"  {ftype:20s}: {counts.get(ftype, 0):,}")
+
+    scatter_params = {
+        "non_functional": dict(alpha=0.45, s=12, zorder=2, edgecolors="none"),
+        "binding":        dict(alpha=0.90, s=30, zorder=3, edgecolors="white", linewidths=0.5),
+        "catalytic":      dict(alpha=0.90, s=30, zorder=4, edgecolors="white", linewidths=0.5),
+        "dual":           dict(alpha=1.00, s=45, zorder=5, edgecolors="white", linewidths=0.6),
+    }
+
+    apply_style()
+    fig, ax = plt.subplots(figsize=FIG_SIZE["full_width"])
+
+    for ftype in FUNCTIONAL_TYPE_DRAW_ORDER:
+        sub = plot_df[plot_df["functional_type"] == ftype]
+        if sub.empty:
+            continue
+        n = len(sub)
+        ax.scatter(
+            sub["RSA-empirical"],
+            sub["RCA_zscore"],
+            c=FUNCTIONAL_TYPE_COLORS[ftype],
+            label=f"{FUNCTIONAL_TYPE_LABELS[ftype]} (n={n:,})",
+            **scatter_params[ftype],
+        )
+
+    ax.legend(fontsize=FONT["size_legend"], loc="upper right")
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.axhline(0, color="grey", linewidth=0.6, linestyle="--")
+    ax.set_xlabel("RSA (empirical)", fontsize=FONT["size_label"])
+    ax.set_ylabel("RCA Z-score",     fontsize=FONT["size_label"])
+
+    fig.tight_layout()
+    save_fig(fig, output_path)
+    plt.close(fig)
+    print(f"Saved: {output_path}")
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 # this run doesn't control for the size of proteins
 
@@ -1368,7 +2148,25 @@ def main_size_controlled(
         y_max=1.0,
     )
 
-    # ── 10. functional residue figure (requires BioLiP CSV) ───────────────
+    # ── 10. RCA z-score vs. StdCloseness scatter ──────────────────────────
+    if "RCA_zscore" in test_df.columns:
+        plot_test_only_rca_vs_closeness(
+            test_df,
+            output_dir / "fig_rca_zscore_vs_closeness_test.png",
+            y_lim=(-4, 10),
+        )
+        if "RCA_zscore" in ref_df.columns:
+            plot_overlay_rca_vs_closeness(
+                ref_df,
+                test_df,
+                output_dir / "fig_rca_zscore_vs_closeness_overlay.png",
+                y_lim=(-4, 10),
+            )
+    else:
+        print("  WARNING: 'RCA_zscore' column not found — skipping RCA scatter plots. "
+              "Run append_rca_to_centrality() to populate the column.")
+
+    # ── 12. functional residue figure (requires BioLiP CSV) ───────────────
     if biolip_csv is not None:
         biolip_csv = Path(biolip_csv)
         test_df = mark_functional_residues(test_df, biolip_csv)
@@ -1541,6 +2339,128 @@ def plot_rsa_boxplot_functional_categories(test_df: pd.DataFrame, output_path: P
     plt.close(fig)
     print(f"Saved: {output_path}")
 
+def merge_rca_into_standardized(std_df: pd.DataFrame,
+                                centrality_dir: Path,
+                                exclude_pdb_ids: set = None) -> pd.DataFrame:
+    """
+    Patch RCA_zscore (and RCA_deltaL, IsCICD) into an already-standardized
+    DataFrame by re-reading only those columns from the raw centrality CSVs.
+
+    Use this when append_rca_to_centrality() was run *after* the last
+    main_size_controlled() call, so the saved *_standardized.csv lacks the
+    RCA columns even though the raw centrality CSVs already have them.
+
+    Join key: pdb_id  +  Node  (both are present in std_df and in every
+    *_centrality.csv file; Node is globally unique within a protein).
+
+    Parameters
+    ----------
+    std_df          : pd.DataFrame
+        Output of pd.read_csv(ver_dir / "test_standardized.csv") or
+        pd.read_csv(ver_dir / "ref_standardized.csv").  Must contain
+        columns 'pdb_id' and 'Node'.
+    centrality_dir  : Path
+        Directory that contains the raw *_centrality.csv files
+        (the same directory passed to load_centrality_dir()).
+    exclude_pdb_ids : set of str, optional
+        PDB IDs to skip, case-insensitive.  Pass the same set used in
+        load_centrality_dir() so the two DataFrames stay in sync.
+
+    Returns
+    -------
+    pd.DataFrame — std_df with RCA_deltaL, RCA_zscore, IsCICD columns
+    added (or overwritten if they were already present).  Rows whose
+    pdb_id+Node has no match in the raw CSVs receive NaN / False.
+    """
+    centrality_dir  = Path(centrality_dir)
+    exclude_pdb_ids = {p.lower() for p in exclude_pdb_ids} if exclude_pdb_ids else set()
+
+    rca_cols = ["RCA_deltaL", "RCA_zscore", "IsCICD"]
+
+    frames = []
+    for csv_path in sorted(centrality_dir.glob("*_centrality.csv")):
+        pdb_id = csv_path.stem.replace("_centrality", "")
+        if pdb_id.lower() in exclude_pdb_ids:
+            continue
+
+        raw = pd.read_csv(csv_path, usecols=lambda c: c in (["Node"] + rca_cols))
+
+        missing = [c for c in rca_cols if c not in raw.columns]
+        if missing:
+            print(f"  WARNING: {pdb_id} centrality CSV missing {missing} — "
+                  "run append_rca_to_centrality() first.")
+            continue
+
+        raw["pdb_id"] = pdb_id
+        frames.append(raw[["pdb_id", "Node"] + rca_cols])
+
+    if not frames:
+        raise FileNotFoundError(
+            f"No centrality CSVs with RCA columns found in {centrality_dir}. "
+            "Run append_rca_to_centrality() to populate them."
+        )
+
+    rca_df = pd.concat(frames, ignore_index=True)
+
+    # drop any pre-existing RCA columns in std_df before merging
+    std_df = std_df.drop(columns=[c for c in rca_cols if c in std_df.columns],
+                         errors="ignore").copy()
+
+    merged = std_df.merge(rca_df, on=["pdb_id", "Node"], how="left")
+
+    n_matched = merged["RCA_zscore"].notna().sum()
+    n_total   = len(merged)
+    print(f"  merge_rca_into_standardized: matched {n_matched:,} / {n_total:,} rows "
+          f"({100 * n_matched / n_total:.1f}%)")
+    if n_matched < n_total:
+        print(f"  WARNING: {n_total - n_matched:,} rows have no RCA match.")
+
+    return merged
+
+
+def append_functional_to_standardized(standardized_csv: Path,
+                                       biolip_csv: Path) -> None:
+    """
+    Patch an 'is_functional' boolean column into an existing
+    *_standardized.csv by joining against the detailed BioLiP CSV.
+
+    Mirrors the pattern of merge_rca_into_standardized(): reads the CSV,
+    calls mark_functional_residues(), and saves back in place so that
+    every downstream figure that loads the CSV gets the column for free.
+
+    Use biolip_functional_residues_detailed.csv (not the plain version)
+    to stay consistent with the 2708-residue count used in other figures.
+
+    Parameters
+    ----------
+    standardized_csv : Path
+        Path to test_standardized.csv (or any standardized CSV that needs
+        the is_functional column).
+    biolip_csv : Path
+        Path to biolip_functional_residues_detailed.csv.
+    """
+    standardized_csv = Path(standardized_csv)
+    biolip_csv       = Path(biolip_csv)
+
+    print(f"Loading {standardized_csv.name} ...")
+    df = pd.read_csv(standardized_csv, low_memory=False)
+
+    # drop any pre-existing is_functional column so we get a clean write
+    if "is_functional" in df.columns:
+        print("  'is_functional' already present — overwriting.")
+        df = df.drop(columns=["is_functional"])
+
+    df = mark_functional_residues(df, biolip_csv)
+
+    n_func  = df["is_functional"].sum()
+    n_total = len(df)
+    print(f"  is_functional: {n_func:,} / {n_total:,} residues "
+          f"({100 * n_func / n_total:.1f}%)")
+
+    df.to_csv(standardized_csv, index=False)
+    print(f"  Saved back to {standardized_csv}")
+
+
 if __name__ == "__main__":
     # 5/20/26 - exclude proteins with unresolved EC numbers (prio_ec_number == '-1')
     # main(
@@ -1644,45 +2564,84 @@ if __name__ == "__main__":
     # test_df = mark_functional_residues(test_df, DATA_DIR_2 / "biolip_functional_residues.csv")
     # plot_rsa_boxplot_functional_categories(test_df, ver_dir / "fig_rsa_boxplot_functional_categories.tiff")
 
-    ### 6/4/26 add betweenness centrality
-    main_size_controlled(
-        ref_centrality_dir   = DATA_DIR_2 / "old_PISCES" / "Centralities",
-        ref_sasa_dir         = DATA_DIR_2 / "old_PISCES" / "SASAs",
-        test_centrality_dir  = DATA_DIR_2 / "Centralities",
-        test_sasa_dir        = DATA_DIR_2 / "SASAs",
-        output_dir           = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7",
-        max_chain_length     = 200,
-        biolip_csv           = DATA_DIR_2 / "biolip_functional_residues.csv",
-        exclude_test_pdb_ids = {'7ara', '4q95'}, ### these two IDs have issues
-        fasta_path           = DATA_DIR_2 / "biolip_filtered.fasta"
-    )
+    ### 6/15/26 add RCA z-score scatter
+    # Reuse the existing standardized CSVs from ver0.7; patch RCA columns in
+    # from the raw centrality CSVs rather than rerunning main_size_controlled.
+    ver_dir              = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7"
+    ref_centrality_dir   = DATA_DIR_2 / "old_PISCES" / "Centralities"
+    test_centrality_dir  = DATA_DIR_2 / "Centralities"
+    output_dir           = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7"
+    exclude_test_pdb_ids = {'7ara', '4q95'}
 
-    ver_dir = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     ref_df  = pd.read_csv(ver_dir / "ref_standardized.csv")
     test_df = pd.read_csv(ver_dir / "test_standardized.csv")
 
-    ref_df  = standardize_betweenness_per_protein(ref_df)
-    test_df = standardize_betweenness_per_protein(test_df)
+    # ref_df  = standardize_betweenness_per_protein(ref_df)
+    # test_df = standardize_betweenness_per_protein(test_df)
 
-    # distribution
-    plot_stdbetweenness_frequency(
-        ref_df,
-        ver_dir / "fig_stdbetweenness_frequency.png",
-        y_max=1.0,
+    # # patch RCA columns from raw centrality CSVs
+    # ref_df  = merge_rca_into_standardized(ref_df,  ref_centrality_dir)
+    # test_df = merge_rca_into_standardized(test_df, test_centrality_dir,
+    #                                       exclude_pdb_ids=exclude_test_pdb_ids)
+
+    # # RCA z-score vs StdCloseness scatter
+    # plot_test_only_rca_vs_closeness(
+    #     test_df, output_dir / "fig_rca_zscore_vs_closeness_test.png", y_lim=(-4, 10)
+    # )
+    # plot_overlay_rca_vs_closeness(
+    #     ref_df, test_df,
+    #     output_dir / "fig_rca_zscore_vs_closeness_overlay.png",
+    #     y_lim=(-4, 10),
+    # )
+
+    ### 6/17/26 RSA (empirical) vs. ClosenessCentrality scatter (test set only),
+    # coloured by functional residue type (catalytic, binding, dual, non-functional).
+    # Reproduces the relationship examined in Amitai et al. Figure 2 (r = -0.32),
+    # showing that RSA and closeness are partially related but independently
+    # informative predictors of active-site residues.
+    detailed_csv = DATA_DIR_2 / "biolip_functional_residues_detailed.csv"
+    label_df = load_functional_type_labels(detailed_csv)
+    test_df  = add_functional_type(test_df, label_df)
+    # plot_test_only_rsa_vs_closeness_2(
+    #     test_df=test_df,
+    #     output_path=output_dir / "fig_rsa_vs_closeness_test_2.png",
+    #     x_lim=(0.0, 1.0),
+    #     y_lim=(-4, 4),
+    # )
+
+    # for metric in ["StdCloseness", "StdDegree", "StdBetweenness", "RCA_zscore"]:
+    #     plot_stdcentrality_frequency_by_functional_type(
+    #         df          = test_df,
+    #         metric      = metric,
+    #         output_path = output_dir / f"fig_{metric.lower()}_freq_by_functype.png",
+    #         y_max       = 1.0,
+    #     )
+
+    # # 6/19/26
+    # plot_test_only_rsa_vs_betweenness(
+    #     test_df,
+    #     output_dir / "fig_rsa_vs_betweenness_test.png",
+    # )
+    plot_test_only_rsa_vs_rca_zscore(
+        test_df,
+        output_dir / "fig_rsa_vs_rca_zscore_test.png",
     )
 
-    # scatter
-    plot_test_only_betweenness_vs_closeness(
-        test_df, ver_dir / "fig_betweenness_vs_closeness_test.png", y_lim=(-4, 12)
-    )
-    plot_test_only_betweenness_vs_degree(
-        test_df, ver_dir / "fig_betweenness_vs_degree_test.png", y_lim=(-4, 12)
-    )
-    plot_overlay_betweenness_vs_closeness(
-        ref_df, test_df, ver_dir / "fig_betweenness_vs_closeness_overlay.png", y_lim=(-4, 12)
-    )
-    plot_overlay_betweenness_vs_degree(
-        ref_df, test_df, ver_dir / "fig_betweenness_vs_degree_overlay.png", y_lim=(-4, 12)
-    )
+    # # 6/19/26 — StdDegree (y) vs StdBetweenness (x), test set only
+    # plot_test_only_degree_vs_betweenness(
+    #     test_df     = test_df,
+    #     output_path = output_dir / "fig_degree_vs_betweenness_test.png",
+    #     x_lim       = (-4, 10),
+    #     y_lim       = (-4, 4),
+    # )
+
+    # # 6/19/26 — StdDegree (y) vs RCA Z-score (x), test set only
+    # plot_test_only_degree_vs_rca(
+    #     test_df     = test_df,
+    #     output_path = output_dir / "fig_degree_vs_rca_zscore_test.png",
+    #     x_lim       = (-4, 10),
+    #     y_lim       = (-4, 4),
+    # )
 

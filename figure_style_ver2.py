@@ -39,7 +39,7 @@ FONT = {
     # If Arial is not installed on your system, matplotlib will fall back to its
     # default sans-serif font and log a warning — install Arial (or the
     # `msttcorefonts` package on Linux) to silence this and ensure compliance.
-    "sans_serif":   ["Arial"],
+    "sans_serif":   ["Arial", "Helvetica", "DejaVu Sans"],
 
     # Point sizes — must stay within the PLOS 8–12 pt window inside figures
     "size_title":   11,    # panel/axes title (bold)

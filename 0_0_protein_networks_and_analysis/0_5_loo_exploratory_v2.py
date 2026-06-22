@@ -1,13 +1,15 @@
 """
-loo_exploratory.py
+loo_exploratory_v2.py
 ====================
-Exploratory analysis of StdCloseness and RSA-empirical distributions
-for functional vs. non-functional residues across the BioLiP enzyme set.
+Exploratory analysis of StdBetweenness, RCA_zscore, and RSA-empirical
+distributions for functional vs. non-functional residues across the
+BioLiP enzyme set.
 
 Purpose:
-    Before defining the LOO threshold search grid, this script examines
-    where functional residues actually fall in (StdCloseness, RSA-empirical)
-    space. Summary statistics are saved to CSV for later inspection or plotting.
+    Before defining the LOO threshold search grid for StdBetweenness and
+    RCA_zscore (residue centrality z-score), this script examines where
+    functional residues fall in those feature spaces. Summary statistics
+    and percentile tables are saved to CSV for grid bound selection.
 
 Outputs (all written to OUT_DIR):
     - residue_labeled.csv         : full merged dataset with functional labels
@@ -26,9 +28,9 @@ from imports import *
 # ---------------------------------------------------------------------------
 # Paths — edit here or in main()
 # ---------------------------------------------------------------------------
-MERGED_CSV    = DATA_DIR_2 / "figures" / "fig1_recreation" / "test_standardized.csv"
+MERGED_CSV    = DATA_DIR_2 / "figures" / "controlled_fig1_recreation_ver0.7" / "test_standardized.csv"
 BIOLIP_CSV    = DATA_DIR_2 / "biolip_functional_residues.csv"
-OUT_DIR       = DATA_DIR_2 / "loo_exploratory"
+OUT_DIR       = DATA_DIR_2 / "loo_exploratory_v2_betweenness_rca"
 
 # PDB IDs to exclude explicitly
 EXCLUDE_IDS   = {"7ara", "4q95"}
@@ -163,15 +165,15 @@ def load_and_label(merged_csv: Path, functional_map: dict,
 
 def compute_summary_stats(df: pd.DataFrame) -> tuple:
     """
-    Compute summary statistics and percentile tables for StdCloseness
-    and RSA-empirical, split by functional label.
+    Compute summary statistics and percentile tables for StdBetweenness,
+    RCA_zscore, and RSA-empirical, split by functional label.
 
     Returns
     -------
     summary_stats : pd.DataFrame
     percentile_table : pd.DataFrame
     """
-    features = ["StdCloseness", "RSA-empirical"]
+    features = ["StdBetweenness", "RCA_zscore", "RSA-empirical"]
     percentiles = [1, 2.5, 5, 10, 25, 50, 75, 90, 95, 97.5, 99]
 
     groups = {
@@ -227,7 +229,7 @@ def main(
     logger = setup_logger(out_dir)
 
     logger.info("=" * 60)
-    logger.info("LOO EXPLORATORY ANALYSIS")
+    logger.info("LOO EXPLORATORY ANALYSIS — StdBetweenness & RCA_zscore")
     logger.info(f"  Merged CSV : {merged_csv}")
     logger.info(f"  BioLiP CSV : {biolip_csv}")
     logger.info(f"  Output dir : {out_dir}")
