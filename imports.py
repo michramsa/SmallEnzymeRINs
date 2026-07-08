@@ -37,25 +37,12 @@ from sklearn.preprocessing import StandardScaler
 from networkx.algorithms import bipartite
 from matplotlib.colors import ListedColormap
 
-from pathlib import Path
-
 BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "3_data"
-PROTEIN_DIR = BASE_DIR / "6_Acr_protein_analysis"
-PDB_EXPLORE_DIR = BASE_DIR / "5_PDB_info_exploration"
-ENZYMES_DIR = DATA_DIR / "enzymes"
-UF_ENZYMES_DIR = DATA_DIR / "enzymes" / "sorted_enzymes_CIFs" / "enzymes_CIF_unflagged"
-STANDARD_DIR = BASE_DIR / "8_standardization"
 
-# 5/19/26 Cleanup
-DATA_DIR_2 = BASE_DIR / "0_1_data"
-
-# deprecated from old version
-# AMITAI_DIR = BASE_DIR / "Amitai"
-# FIGS_DIR = BASE_DIR / "Figure creation"
-# GEN_DATA_DIR = BASE_DIR / "General Data Analysis"
-# IMP_DIR = BASE_DIR / "Important Files"
-# KNOWN_DIR = BASE_DIR / "known acrs"
-# PISCES_DIR = BASE_DIR / "PISCES"
+# 6/27/26 Final Cleanup 
+FINAL_DIR = BASE_DIR / "0_2_final_check"
+DATA_DIR_3 = BASE_DIR / "0_2_final_check" / "data"
+MAIN_DIR = BASE_DIR / "0_2_final_check" / "main"
+FIGS_DIR = BASE_DIR / "0_2_final_check" / "figures"
 
 

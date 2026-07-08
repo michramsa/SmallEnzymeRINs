@@ -1,20 +1,5 @@
 **/__pycache__/
 .vscode/
-3_data/
-5_PDB_info_exploration/figures/
-5_PDB_info_exploration/RCSB CSV helpers/
-5_PDB_info_exploration/SCOPe/
+0_2_final_check/data
+0_2_final_check/figures
 Old Code/
-tmp_mmseqs/
-input_data/
-6_arpeggio_troubleshoot/arpeggio_comparison
-logs/
-9_troubleshooting/
-0_1_data/
-1_figure_creation/
-5_PDB_info_exploration/
-8_experiments/
-tmp_mmseqs_search/
-input_data/
-logs/
-tmp_mmseqs/

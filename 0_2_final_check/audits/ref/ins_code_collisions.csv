@@ -1,0 +1,3 @@
+stem,chain,seq_id,n_collapsed_to_1,full_ids,comp_ids
+1IFG_clean,A,130,4,A_130_(none); A_130_A; A_130_B; A_130_C,TRP; ALA; ASP; GLY
+2RKQ_clean,A,26,2,A_26_(none); A_26_A,ASN; GLY
