@@ -67,7 +67,7 @@ Branch: main
 
 0_2_final_check/main - This folder contains files used in paper to generate main results.
 
-# 0_2_final_check/main File Directory (CTRL+F a filename for a description): 
+# File Directory within main folder (CTRL+F a filename for a description): 
 
 0_1_parallel_arpeggio_CIF.py AND 0_1_parallel_arpeggio_PDB_ver3.py - Uses structure files (CIF or PDB, respectively) and runs Arpeggio. The separate Arpeggio environment described above in the "Dependencies" section is needed for this.
 - Dependency: clean_pdb.py (see Arpeggio), clean_cif.py (included)
