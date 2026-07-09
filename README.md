@@ -71,7 +71,7 @@ Branch: main
 
 0_1_parallel_arpeggio_CIF.py AND 0_1_parallel_arpeggio_PDB_ver3.py - Uses structure files (CIF or PDB, respectively) and runs Arpeggio. The separate Arpeggio environment described above in the "Dependencies" section is needed for this.
 - Dependency: clean_pdb.py (see Arpeggio), clean_cif.py (included)
-- 
+
 SASA.py - For computation of SASA and RSA for a set of provided PDB/CIF protein structure files.
 
 biolip_residue_labels.py - UPDATE(?), may be deprecated
