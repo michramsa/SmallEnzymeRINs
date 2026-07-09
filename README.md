@@ -29,19 +29,17 @@ Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pit
 ## The general high-level workflow is the following:
 
 1. Source PDB data
+  - This can be done using the batch_download.sh script (original source: [RSCB PDB website](https://www.rcsb.org/docs/programmatic-access/batch-downloads-with-shell-script))
 
-2. For protein contact network (PCN) creation:
-- Calculate residue distances provided a given threshold in angstroms
-- Provided within the threshold, utilize Biopython and NetworkX to create PCN based on gathered information
-
-3. For residue interaction graph (RIG) creation:
+3. For residue interaction network (RIN) creation:
 
 - Utilize Arpeggio’s cleaning function to create cleaned mmCIF files of the PDBs of interest
+  - Files: 0_1_parallel_arpeggio_CIF.py (if starting with CIF structure files), 0_1_parallel_arpeggio_PDB_ver3.py (if starting with PDB structure files)
 - Run Arpeggio on the cleaned mmCIF files, obtain JSON files
 - Read through the JSON files
 - Provided an interaction exists between two residues, use NetworkX to build the RIG
 
-4. Perform various analyses based on the gathered PCNs and RIGs
+4. Perform various analyses based on the gathered RINs
 
 - Small-world index 
 - Standardized degree and closeness centrality values based on created PCNs and RIGs 
