@@ -35,7 +35,7 @@ Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pit
 1. Source PDB/CIF data
   - This can be done using the batch_download.sh script (original source: [RSCB PDB website](https://www.rcsb.org/docs/programmatic-access/batch-downloads-with-shell-script))
 
-3. For residue interaction network (RIN) creation:
+2. For residue interaction network (RIN) creation:
 
 - Utilize Arpeggio’s cleaning function to create cleaned mmCIF files of the PDBs of interest
   - Files: 0_1_parallel_arpeggio_CIF.py (if starting with CIF structure files), 0_1_parallel_arpeggio_PDB_ver3.py (if starting with PDB structure files)
@@ -44,7 +44,7 @@ Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pit
 - Provided an interaction exists between two residues, use NetworkX to build the RIN
   - Files: parallel_json_to_rin.py
 
-4. Perform various analyses based on the gathered RINs
+3. Perform various analyses based on the gathered RINs
 
 - Standardized centrality values (degree, closeness, residue, PageRank) using NetworkX built-in functions
 - Creation of CSVs to hold RIN data (individual residue degree or closeness centrality values) using [BioLiP](https://zhanggroup.org/BioLiP/).
