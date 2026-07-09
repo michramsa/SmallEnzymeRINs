@@ -1,10 +1,10 @@
-Last updated: 11/12/2025 - Note from michramsa: Forgot to make the repository public and update the title + Zenodo link!
+Last updated: 7/9/2026
 
-This Github contains the analysis code used for the paper "
-Revisiting graph-based approaches for small protein analysis: Insights from anti-CRISPR protein networks
-". This is a “cleaned” version of the code (includes all intermediary drafted files that were used to build more refined files) - that said, any possible missing parts or issues, I can be contacted directly to help with here (via Issues).
+This Github contains the analysis code used for the paper "". 
 
-[Data used within the paper can be found in Zenodo here.](https://zenodo.org/records/17415956)
+This is a “cleaned” version of the code (includes all intermediary drafted files that were used to build more refined files) - that said, any possible missing parts or issues, I can be contacted directly to help with here (via Issues).
+
+[Data used within the paper can be found in Zenodo here.]()
 
 ## Computing Environment Used:
 
@@ -18,17 +18,21 @@ All work was performed on an Alienware x15 R2 laptop utilizing the VSCode IDE in
 - GPU: NVIDIA GeForce RTX 3060 Laptop GPU
 - Python version - Python 3.10.12
 
+## AI Use Disclosure (Same as paper):
+
+Claude Sonnet 4.6 and Opus 4.8 were utilized throughout the methodology in the following ways: assistance with data organization (i.e., PDB files to CSV files with data), figure generation (matplotlib), for help with LaTeX formatting for tables or equations, coding/commenting (i.e., creating functions to enable batch processing/parallelization and increase efficiency of larger functions, creation of helper functions to utilize package functions on existing data, descriptions of functions), and general debugging purposes (i.e. package version issues and incompatibilities in venv). All output has been reviewed by the first author. 
+
 ## Dependencies:
 
 An Anaconda environment was created and used with the code. All active dependencies and their version numbers can be found in “requirements.txt”. 
 
-Arpeggio was installed separately and ran within its own environment. Dependencies needed to run Arpeggio are NOT included within the above "requirements.txt" file. To learn how to install Arpeggio (maintained by PDBeurope), please refer to its Github found here: https://github.com/PDBeurope/arpeggio . 
+Arpeggio was installed separately and ran within its own environment. Dependencies needed to run Arpeggio are NOT included within the above "requirements.txt" file. To learn how to install Arpeggio (maintained by PDBeurope), please refer to [its Github found here](https://github.com/PDBeurope/arpeggio). 
 
 Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pitt, David B Ascher, Tom L Blundell, Arpeggio: A Web Server for Calculating and Visualising Interatomic Interactions in Protein Structures. Journal of Molecular Biology, Volume 429, Issue 3, 2017, Pages 365-371, ISSN 0022-2836.
 
 ## The general high-level workflow is the following:
 
-1. Source PDB data
+1. Source PDB/CIF data
   - This can be done using the batch_download.sh script (original source: [RSCB PDB website](https://www.rcsb.org/docs/programmatic-access/batch-downloads-with-shell-script))
 
 3. For residue interaction network (RIN) creation:
@@ -37,83 +41,65 @@ Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pit
   - Files: 0_1_parallel_arpeggio_CIF.py (if starting with CIF structure files), 0_1_parallel_arpeggio_PDB_ver3.py (if starting with PDB structure files)
 - Run Arpeggio on the cleaned mmCIF files, obtain JSON files
 - Read through the JSON files
-- Provided an interaction exists between two residues, use NetworkX to build the RIG
+- Provided an interaction exists between two residues, use NetworkX to build the RIN
+  - Files: parallel_json_to_rin.py
 
 4. Perform various analyses based on the gathered RINs
 
-- Small-world index 
-- Standardized degree and closeness centrality values based on created PCNs and RIGs 
-- Creation of CSVs to hold PCN/RIG data such as keeping track of individual residue degree or closeness centrality values
+- Standardized centrality values (degree, closeness, residue, PageRank) using NetworkX built-in functions
+- Creation of CSVs to hold RIN data (individual residue degree or closeness centrality values) using [BioLiP](https://zhanggroup.org/BioLiP/).
+- SASA calculations using BioPython (on raw PDB/CIF structure files)
 
 ---
-# Data (roughly 9 GB)
+# Data
 
 This work uses data from the Protein Data Bank. Data provided by the RCSB PDB (rcsb.org) [1]. 
 
 Citation: H.M. Berman, J. Westbrook, Z. Feng, G. Gilliland, T.N. Bhat, H. Weissig, I.N. Shindyalov, P.E. Bourne. (2000) The Protein Data Bank Nucleic Acids Research, 28: 235-242.
 
-Important Files - This folder contains files used in paper. 
+Branch: code_history 
 
-- 3 main Acr data: centrality and node information for both PCNs and RIGs of AcrIF1, AcrIIA1, and AcrVIA1
-- 3 main Acr PDB files: PDB files associated with AcrIF1, AcrIIA1, and AcrVIA1
-- Analysis Data: Organism distribution and amino acid analysis distribution
-- Cleaned Centralities: Centrality information for all RIGs for the PISCES data set
-- Cleaned PDBs: the converted mmCIF files from the PDBe-Arpeggio cleaning process.
-- Cleaned RIGs: RIGs created using cleaned PDBs 
-- Cleaned SASAs: SASA and RSA information for each protein in PISCES data set
-- mmCIF files: PDBe-Arpeggio cleaning returns a mmCIF, which is then converted to a PDB.
+This contains old and deprecated iterations of files associated with the project. This is shared mainly for transparency purposes.
 
-PISCES - This folder contains a mix of used and unused files of the paper and remnants of troubleshooting and testing. Some folders that are explicitly used were copied into Important Files for keeping it clear what was and was not used within the paper. 
+Branch: main
 
-Separating the data was an afterthought and many of the .py files path to this folder, and so it must be included. 
+0_2_final_check/audits - This folder contains general information about the created RINs as well as each PDB ID within both the reference (ref) and test sets.
 
-[deprecated] implies the file was a testing file or from an old or failed run.
+0_2_final_check/main - This folder contains files used in paper to generate main results.
 
-- Centralities: same as Cleaned Centralities (Important Files)
-- CIFs: same as mmCIF files (Important Files)
-- GraphMLs: same as Cleaned RIGs (Important Files)
-- known acr data: PCNs and RIGs for AcrIF1, AcrIIA1, and AcrVIA1
-- PDBs_compressed: compressed versions of the PDBs (raw)
-- SASAs: same as Cleaned SASAs
-- PISCES_culled.fasta: the PISCES call returned some PDBs that had to be filtered for size or for lacking data, these are the remaining PDBs kept for use
-- PISCES_data_info_mutant.csv: contains information about proteins which are considered 'mutants' out of the used PDBs
-- PISCES_data_info: contains information about all proteins pulled (mutants and non-mutants)
-- PISCES_pdbs.txt: a text file with all of the PDB ids used
+# 0_2_final_check/main File Directory (CTRL+F a filename for a description): 
 
-Not included here but available on request:
+0_1_parallel_arpeggio_CIF.py AND 0_1_parallel_arpeggio_PDB_ver3.py - Uses structure files (CIF or PDB, respectively) and runs Arpeggio. The separate Arpeggio environment described above in the "Dependencies" section is needed for this.
+- Dependency: clean_pdb.py (see Arpeggio), clean_cif.py (included)
+- 
+SASA.py - For computation of SASA and RSA for a set of provided PDB/CIF protein structure files.
 
-- Cleaned JSONs: JSON representation for all RIGs for the PISCES data set. Generated by Arpeggio. (Roughly 33 GB generated size. - Not provided but generated using the "parallel_arpeggio.py" file. Available on direct request.)
-- CIFs_large: unused data due to size constraints
-- JSONs: [deprecated] same as Cleaned JSONs (Important Files)
-- PDBs: PDB files pulled using Protein Data Bank script (batch_download.sh)
-- PDBs_cleaned: [deprecated] from an old run 
+biolip_residue_labels.py - UPDATE(?), may be deprecated
 
-# File Directory (CTRL+F a filename for a description): 
+cent_figs_by_funct_type.py - Helper file for figures.py.
 
-acr_small_world.py - Holds the individual function calls for the small world analysis, using functions found in the small_world_networkx.py file.
+check_graphml_connectivity.py - Checks for disconnected graphs.
 
-small_world_networkx.py - Holds functions for calculating the small-world values (sigma, omega, and SWI). Relies on NetworkX for these calculations. 
+clean_cif.py - Adaptation of the clean_pdb.py file created by Jubb. This file is needed for Arpeggio.
 
-enhanced_small_world_analysis.py - Performs the main analysis and creates figures to show small-world values. WARNING: This file takes a long time to run. Notably, PDB: 6VRB is roughly 24 hrs+ to run.
+figures.py - File that generates the figures for the paper.
 
-arpeggio_PISCES.py - A file that contains functions to take the PDB files found using PISCES and run pdbe-arpeggio on them. Consider this as a “draft” of the process used in redo_small_protein_RIGs.py and parallel_arpeggio.py.
+functional_breakdown.py, functional_breakdown_by_ec.py, functional_distribution_by_amino_acid.py - Exploratory files to see figures associated with the distribution of enzymes within the test set.
 
-redo_small_protein_RIGs.py - A file containing the run for the specific proteins used within the paper. Has a max size restriction on the file size to allow processing on software.
+general_network.py - Provides whole graph topology for RINs in reference or test sets.
 
-parallel_arpeggio.py - A parallel implementation that mimics the arpeggio_PISCES.py file, just can process multiple ones at a given time. This is more refined and what was used primarily for the paper.
+inspect_jackknife_stepsizes.py - Helps with calculating the needed parameters for jackknife_experiment.py.
 
-calculate_residue_averages.py - Calculates the averages and standard deviations of the degree, degree centrality, closeness centrality values for each residue. Calculations are based on corresponding CSV files for each protein and combines it into one single text file.
+jackknife_experiment.py - The user (based on their own analyses) provides a range of values for centrality values, and runs the jackknife/leave-one-out experiment. These are described within the paper as a figure and in pseudocode. The concise gist is it makes a list of candidate combinations of RSA and a centrality type, looks at each residue within the RIN, and if that residue's values are within the designated range, then it predicts it as a functional residue. Then it checks against the ground truth. It can then collect that information and use the MCC formula for each combination.
 
-create_PCN.py - Creates PCN provided a PDB. If NMR data is entered, it generally uses the first model (standard assignment for the “best” model chosen by those who created the structure). 
+jackknife_explore.py - This is taking the information gathered by parallel_RIN_analysis.py (aka the centrality values) and provides the user information that they can use to help them choose their parameters for jackknife_experiment.py. Note: This file does not tell the user what is the "best" to use, etc. You do have to use your own interpretations to determine what thresholds you want to test.
 
-create_PCN_with_rna.py - Alternative version of create_PCN.py that takes into account PDB files which include RNA information.
+jackknife_figures.py - Generates images related to the output of jackknife_experiment.py.
 
-create_RIG.py - Creates RIG provided a JSON (the output you’d get from pdbe-arpeggio). 
+move_SASA_files.py - A helper function for rearranging SASA files.
 
-parallel_rig_analysis - A parallel implementation that mimics the rig_analysis.py file, just can process multiple ones at a given time. 
+parallel_RIN_analysis.py - Adds in all of the raw centrality measures using built-in NetworkX values and the residue centrality definition provided by Sol et al. (INSERT LINK TO PAPER). 
 
-parallel_rig.py - A parallel implementation that mimics the create_RIG.py file, just can process multiple ones at a given time.
+parallel_json_to_rin.py - Turns a JSON outputted by Arpeggio into a RIN using built-in NetworkX values.
 
-retrieve_PISCES_data.py - Uses the output FASTA file from the PISCES server, and then prompts the PDB API to batch download the data. The chosen PDB files are also filtered here (such as checking for mutants, removing membrane proteins, etc.).
-
-rig_analysis.py - Calculations for degree and closeness centrality in batch and as a singular process for graphs. RSA calculations also happen here, but utilize the original, raw PDB files.
+standardization.py - Performs the standardization process using raw values. For degree centrality, it uses the reference set. For all other centrality measures, it is in reference to the protein's residues only.
