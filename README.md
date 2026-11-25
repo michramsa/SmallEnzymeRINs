@@ -4,7 +4,9 @@ This Github contains the analysis code used for the paper "Evaluating the stabil
 
 This is a “cleaned” version of the code (includes all intermediary drafted files that were used to build more refined files) - that said, any possible missing parts or issues, I can be contacted directly to help with here (via Issues).
 
-[Data used within the paper can be found in Zenodo here.](https://zenodo.org/records/24431440?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImIzM2M0YjE1LTk0MGYtNDk3Yy04NDhiLThjOWFjODJjZDM4NyIsImRhdGEiOnt9LCJyYW5kb20iOiJhMTQ0OTI4Nzg2ZjZjZDY0ZjlhNWI4NWRjYzMxNGIwOSJ9.TAEL8DRdCaUhZoxbFjO3kR-flufJxWqUvNCM4-6r59MBHdaU9D9Ca6yBSeBc-4QYKSYFQT6mcuJ8F6Ms7dBnzw)
+[Data (created RINs and PCNs) used within the paper can be found in Zenodo here.](https://zenodo.org/records/24431440?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImIzM2M0YjE1LTk0MGYtNDk3Yy04NDhiLThjOWFjODJjZDM4NyIsImRhdGEiOnt9LCJyYW5kb20iOiJhMTQ0OTI4Nzg2ZjZjZDY0ZjlhNWI4NWRjYzMxNGIwOSJ9.TAEL8DRdCaUhZoxbFjO3kR-flufJxWqUvNCM4-6r59MBHdaU9D9Ca6yBSeBc-4QYKSYFQT6mcuJ8F6Ms7dBnzw)
+
+The main thing to keep in mind for this code are the path and file locations. I try to clarify this as mapping all of these files.
 
 ## Computing Environment Used:
 
@@ -69,7 +71,20 @@ OLD:
 - SASA calculations using BioPython (on raw PDB/CIF structure files)
 
 ---
+
+
 # Data
+--------------------------UPDATE:
+
+0_4_revisions - This folder contains all code associated with recent experiments after reviewer feedback.
+
+Subfolders of 0_4_revisions:
+
+1. 0_RIN_construction - Files associated with creating the RINs and PCNs. (Data file: biolip_residue_labels.csv included here). Arpeggio provides a JSON. RING 4.0 makes it's own data files (.ringNodes, .ringEdges).
+2. 2_experiments - Files associated with all experiments (efficiency, Jackknife/LOO).
+
+
+--------------------------OLD:
 
 This work uses data from the Protein Data Bank. Data provided by the RCSB PDB (rcsb.org) [1]. 
 
