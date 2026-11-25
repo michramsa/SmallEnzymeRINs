@@ -38,12 +38,15 @@ Citation: Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pit
   - This can be done using the batch_download.sh script (original source: [RSCB PDB website](https://www.rcsb.org/docs/programmatic-access/batch-downloads-with-shell-script))
 
 2. For residue interaction network (RIN) creation:
+
 UPDATE:
 You will still need a cleaned mmCIF file for [Arpeggio.](https://github.com/PDBeurope/arpeggio)
+
 CITATION:
 Harry C Jubb, Alicia P Higueruelo, Bernardo Ochoa-Montaño, Will R Pitt, David B Ascher, Tom L Blundell, Arpeggio: A Web Server for Calculating and Visualising Interatomic Interactions in Protein Structures. Journal of Molecular Biology, Volume 429, Issue 3, 2017, Pages 365-371, ISSN 0022-2836,
 
 No cleaned file is needed for RING 4.0. [RING 4.0 is available here.](https://ring.biocomputingup.it/)
+
 CITATION: RING 4.0: Faster residue interaction networks with novel interaction types across over 35,000 different chemical structures.
 Del Conte, A., Camagni, G. F., Clementel, D., Minervini, G., Monzon, A. M., Ferrari, C., Piovesan, D., & Tosatto, S. C. E. (2024). Nucleic Acids Research, 52(W1), W306–W312. 
 
