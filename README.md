@@ -6,7 +6,7 @@ This is a “cleaned” version of the code (includes all intermediary drafted f
 
 [Data (created RINs and PCNs) used within the paper can be found in Zenodo here.](https://zenodo.org/records/24431440?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImIzM2M0YjE1LTk0MGYtNDk3Yy04NDhiLThjOWFjODJjZDM4NyIsImRhdGEiOnt9LCJyYW5kb20iOiJhMTQ0OTI4Nzg2ZjZjZDY0ZjlhNWI4NWRjYzMxNGIwOSJ9.TAEL8DRdCaUhZoxbFjO3kR-flufJxWqUvNCM4-6r59MBHdaU9D9Ca6yBSeBc-4QYKSYFQT6mcuJ8F6Ms7dBnzw)
 
-The main thing to keep in mind for this code are the path and file locations. I try to clarify this as mapping all of these files.
+NOTE: The main thing to keep in mind for this code are the path and file locations, as one file may rely on the output of another file - I try to clarify this as mapping all of these files.
 
 ## Computing Environment Used:
 
