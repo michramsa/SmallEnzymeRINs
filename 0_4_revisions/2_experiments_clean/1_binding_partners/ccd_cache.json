@@ -1,0 +1,327 @@
+{
+ "2AL": {
+  "name": "1-(2,5-DIOXO-2,5-DIHYDRO-1H-IMIDAZOL-4-YL)UREA",
+  "type": "non-polymer",
+  "formula": "C4 H4 N4 O3"
+ },
+ "33B": {
+  "name": "3,3'-(E)-diazene-1,2-diylbis{6-[(chloroacetyl)amino]benzenesulfonic acid}",
+  "type": "non-polymer",
+  "formula": "C16 H14 Cl2 N4 O8 S2"
+ },
+ "35G": {
+  "name": "GUANOSINE-3',5'-MONOPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C10 H12 N5 O7 P"
+ },
+ "3PD": {
+  "name": "2-AMINO-9-(2-DEOXY-3-O-PHOSPHONOPENTOFURANOSYL)-1,9-DIHYDRO-6H-PURIN-6-ONE",
+  "type": "non-polymer",
+  "formula": "C10 H14 N5 O7 P"
+ },
+ "3PO": {
+  "name": "TRIPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "H5 O10 P3"
+ },
+ "4XA": {
+  "name": "3-(5,6-dimethyl-2H-isoindol-2-yl)-N'-[(E)-furan-2-ylmethylidene]benzohydrazide",
+  "type": "non-polymer",
+  "formula": "C22 H19 N3 O2"
+ },
+ "5GP": {
+  "name": "GUANOSINE-5'-MONOPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C10 H14 N5 O8 P"
+ },
+ "5P5": {
+  "name": "(2R)-3-{[(S)-hydroxy{[(1R,2R,3R,4R,5S,6R)-2,3,4,6-tetrahydroxy-5-(phosphonooxy)cyclohexyl]oxy}phosphoryl]oxy}propane-1,2-diyl dibutanoate",
+  "type": "non-polymer",
+  "formula": "C17 H32 O16 P2"
+ },
+ "7MG": {
+  "name": "7N-METHYL-8-HYDROGUANOSINE-5'-MONOPHOSPHATE",
+  "type": "RNA linking",
+  "formula": "C11 H18 N5 O8 P"
+ },
+ "7XL": {
+  "name": "[[(2R,3S,4R,5R)-5-(4-azanyl-2-oxidanylidene-pyrimidin-1-yl)-3,4-bis(oxidanyl)oxolan-2-yl]methoxy-oxidanyl-phosphoryl]oxy-(2-hydroxyethyl)phosphinic acid",
+  "type": "non-polymer",
+  "formula": "C11 H19 N3 O11 P2"
+ },
+ "A5P": {
+  "name": "ARABINOSE-5-PHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C5 H13 O8 P"
+ },
+ "ADP": {
+  "name": "ADENOSINE-5'-DIPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C10 H15 N5 O10 P2"
+ },
+ "ANP": {
+  "name": "PHOSPHOAMINOPHOSPHONIC ACID-ADENYLATE ESTER",
+  "type": "non-polymer",
+  "formula": "C10 H17 N6 O12 P3"
+ },
+ "APR": {
+  "name": "ADENOSINE-5-DIPHOSPHORIBOSE",
+  "type": "non-polymer",
+  "formula": "C15 H23 N5 O14 P2"
+ },
+ "ATP": {
+  "name": "ADENOSINE-5'-TRIPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C10 H16 N5 O13 P3"
+ },
+ "BGC": {
+  "name": "beta-D-glucopyranose",
+  "type": "D-saccharide, beta linking",
+  "formula": "C6 H12 O6"
+ },
+ "CA": {
+  "name": "CALCIUM ION",
+  "type": "non-polymer",
+  "formula": "Ca"
+ },
+ "CD": {
+  "name": "CADMIUM ION",
+  "type": "non-polymer",
+  "formula": "Cd"
+ },
+ "CU1": {
+  "name": "COPPER (I) ION",
+  "type": "non-polymer",
+  "formula": "Cu"
+ },
+ "CYC": {
+  "name": "PHYCOCYANOBILIN",
+  "type": "non-polymer",
+  "formula": "C33 H40 N4 O6"
+ },
+ "DBI": {
+  "name": "PHOSPHORIC ACID MONO-[5-(5,6-DIMETHYL-BENZOIMIDAZOL-1-YL)-4-HYDROXY-2-HYDROXYMETHYL-TETRAHYDRO-FURAN-3-YL] ESTER",
+  "type": "non-polymer",
+  "formula": "C14 H19 N2 O7 P"
+ },
+ "DDN": {
+  "name": "3,4-DIHYDRO-2'-DEOXYURIDINE-5'-MONOPHOSPHATE",
+  "type": "DNA linking",
+  "formula": "C9 H15 N2 O8 P"
+ },
+ "DGP": {
+  "name": "2'-DEOXYGUANOSINE-5'-MONOPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C10 H14 N5 O7 P"
+ },
+ "DPV": {
+  "name": "dodecyl 2-(trimethylammonio)ethyl phosphate",
+  "type": "non-polymer",
+  "formula": "C17 H38 N O4 P"
+ },
+ "DQH": {
+  "name": "(2R,3R)-2-(3,4-DIHYDROXYPHENYL)-3,5,7-TRIHYDROXY-2,3-DIHYDRO-4H-CHROMEN-4-ONE",
+  "type": "non-polymer",
+  "formula": "C15 H12 O7"
+ },
+ "EH8": {
+  "name": "4-(3-methyl-5-phenyl-imidazol-4-yl)pyridine",
+  "type": "non-polymer",
+  "formula": "C15 H13 N3"
+ },
+ "EJ3": {
+  "name": "3-[(1-ethanoyl-5-methoxy-indol-3-yl)carbonylamino]-4-fluoranyl-5-(1-methylpyrazol-4-yl)benzoic acid",
+  "type": "non-polymer",
+  "formula": "C23 H19 F N4 O5"
+ },
+ "FE": {
+  "name": "FE (III) ION",
+  "type": "non-polymer",
+  "formula": "Fe"
+ },
+ "FE2": {
+  "name": "FE (II) ION",
+  "type": "non-polymer",
+  "formula": "Fe"
+ },
+ "FGX": {
+  "name": "[(1~{R},5~{R},6~{S},8~{R})-8-(6-aminopurin-9-yl)-4'-[(~{R})-oxidanyl-[4-(2-oxidanylidenepropylsulfanyl)phenyl]methyl]spiro[2,4,7-trioxa-3-boranuidabicyclo[3.3.0]octane-3,7'-7-boranuidabicyclo[4.3.0]nona-1(6),2,4-triene]-6-yl]methoxy-tris(oxidanyl)phosphanium",
+  "type": "non-polymer",
+  "formula": "C28 H31 B N5 O9 P S"
+ },
+ "FUC": {
+  "name": "alpha-L-fucopyranose",
+  "type": "L-saccharide, alpha linking",
+  "formula": "C6 H12 O5"
+ },
+ "GAL": {
+  "name": "beta-D-galactopyranose",
+  "type": "D-saccharide, beta linking",
+  "formula": "C6 H12 O6"
+ },
+ "GDP": {
+  "name": "GUANOSINE-5'-DIPHOSPHATE",
+  "type": "RNA linking",
+  "formula": "C10 H15 N5 O11 P2"
+ },
+ "GEY": {
+  "name": "(2Z)-dodec-2-enoic acid",
+  "type": "non-polymer",
+  "formula": "C12 H22 O2"
+ },
+ "GLC": {
+  "name": "alpha-D-glucopyranose",
+  "type": "D-saccharide, alpha linking",
+  "formula": "C6 H12 O6"
+ },
+ "GTP": {
+  "name": "GUANOSINE-5'-TRIPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C10 H16 N5 O14 P3"
+ },
+ "I3P": {
+  "name": "D-MYO-INOSITOL-1,4,5-TRIPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C6 H15 O15 P3"
+ },
+ "I7P": {
+  "name": "(1r,2R,3S,4s,5R,6S)-2,3,4,5,6-pentakis(phosphonooxy)cyclohexyl trihydrogen diphosphate",
+  "type": "non-polymer",
+  "formula": "C6 H19 O27 P7"
+ },
+ "IHP": {
+  "name": "INOSITOL HEXAKISPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C6 H18 O24 P6"
+ },
+ "IMY": {
+  "name": "1-{[4,5-BIS(4-CHLOROPHENYL)-2-(2-ISOPROPOXY-4-METHOXYPHENYL)-4,5-DIHYDRO-1H-IMIDAZOL-1-YL]CARBONYL}PIPERAZINE",
+  "type": "non-polymer",
+  "formula": "C30 H32 Cl2 N4 O3"
+ },
+ "MAN": {
+  "name": "alpha-D-mannopyranose",
+  "type": "D-saccharide, alpha linking",
+  "formula": "C6 H12 O6"
+ },
+ "MG": {
+  "name": "MAGNESIUM ION",
+  "type": "non-polymer",
+  "formula": "Mg"
+ },
+ "MN": {
+  "name": "MANGANESE (II) ION",
+  "type": "non-polymer",
+  "formula": "Mn"
+ },
+ "MTA": {
+  "name": "5'-DEOXY-5'-METHYLTHIOADENOSINE",
+  "type": "non-polymer",
+  "formula": "C11 H15 N5 O3 S"
+ },
+ "NI": {
+  "name": "NICKEL (II) ION",
+  "type": "non-polymer",
+  "formula": "Ni"
+ },
+ "NOO": {
+  "name": "N-(3-oxocyclohex-1-en-1-yl)octanamide",
+  "type": "non-polymer",
+  "formula": "C14 H23 N O2"
+ },
+ "NOV": {
+  "name": "NOVOBIOCIN",
+  "type": "non-polymer",
+  "formula": "C31 H36 N2 O11"
+ },
+ "PNS": {
+  "name": "4'-PHOSPHOPANTETHEINE",
+  "type": "non-polymer",
+  "formula": "C11 H23 N2 O7 P S"
+ },
+ "PO4": {
+  "name": "PHOSPHATE ION",
+  "type": "non-polymer",
+  "formula": "O4 P"
+ },
+ "PPV": {
+  "name": "PYROPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "H4 O7 P2"
+ },
+ "RCY": {
+  "name": "(3'R)-1'-oxyl-2',2',5',5'-tetramethyl-1,3'-bipyrrolidine-2,5-dione",
+  "type": "non-polymer",
+  "formula": "C12 H19 N2 O3"
+ },
+ "REO": {
+  "name": "PERRHENATE",
+  "type": "non-polymer",
+  "formula": "O4 Re"
+ },
+ "RXO": {
+  "name": "4-arsanyl-2-nitrophenol",
+  "type": "non-polymer",
+  "formula": "C6 H6 As N O3"
+ },
+ "SAH": {
+  "name": "S-ADENOSYL-L-HOMOCYSTEINE",
+  "type": "non-polymer",
+  "formula": "C14 H20 N6 O5 S"
+ },
+ "SOR": {
+  "name": "sorbitol",
+  "type": "D-saccharide",
+  "formula": "C6 H14 O6"
+ },
+ "SSM": {
+  "name": "(2S)-2-(acetylamino)-N-methyl-4-[(S)-methylsulfinyl]butanamide",
+  "type": "non-polymer",
+  "formula": "C8 H16 N2 O3 S"
+ },
+ "TCE": {
+  "name": "3,3',3''-phosphanetriyltripropanoic acid",
+  "type": "non-polymer",
+  "formula": "C9 H15 O6 P"
+ },
+ "TSA": {
+  "name": "8-HYDROXY-2-OXA-BICYCLO[3.3.1]NON-6-ENE-3,5-DICARBOXYLIC ACID",
+  "type": "non-polymer",
+  "formula": "C10 H12 O6"
+ },
+ "UM3": {
+  "name": "2'-DEOXYURIDINE 3'-MONOPHOSPHATE",
+  "type": "non-polymer",
+  "formula": "C9 H13 N2 O8 P"
+ },
+ "UVC": {
+  "name": "URIDINE-2',3'-VANADATE",
+  "type": "non-polymer",
+  "formula": "C9 H12 N2 O9 V"
+ },
+ "VAL": {
+  "name": "VALINE",
+  "type": "L-peptide linking",
+  "formula": "C5 H11 N O2"
+ },
+ "VK3": {
+  "name": "MENADIONE",
+  "type": "non-polymer",
+  "formula": "C11 H8 O2"
+ },
+ "WO4": {
+  "name": "TUNGSTATE(VI)ION",
+  "type": "non-polymer",
+  "formula": "O4 W"
+ },
+ "XYS": {
+  "name": "alpha-D-xylopyranose",
+  "type": "D-saccharide, alpha linking",
+  "formula": "C5 H10 O5"
+ },
+ "ZN": {
+  "name": "ZINC ION",
+  "type": "non-polymer",
+  "formula": "Zn"
+ }
+}
